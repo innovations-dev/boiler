@@ -1,7 +1,26 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  outputFileTracingIncludes: {
+    // Explicitly include all MDX files in the content directory in production builds
+    '/**/*': ['./content/*.mdx'],
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        pathname: '/**',
+      },
+    ],
+  },
+  experimental: {
+    mdxRs: {
+      mdxType: 'gfm',
+    },
+  },
 };
+const withMDX = require('@next/mdx')();
 
-export default nextConfig;
+export default withMDX(nextConfig);
