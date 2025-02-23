@@ -10,6 +10,7 @@ import { globby } from 'globby';
 
 import { sitemapConfig } from '@/config/sitemap.config';
 import { BASE_URL } from '@/lib/utils';
+import { env } from '@/env';
 
 /**
  * Configuration interface for a sitemap route
@@ -69,17 +70,22 @@ const staticRoutes: RouteConfig[] = [
  */
 async function shouldIncludePage(filePath: string): Promise<boolean> {
   try {
+    // Get the content of the file
     const content = await fs.readFile(filePath, 'utf8');
+
+    // Check if the file is published
     const publishedMatch = content.match(/published:\s*(true|false)/);
+    // If the file is published, return true
     const published = publishedMatch ? publishedMatch[1] === 'true' : true;
 
-    return process.env.NODE_ENV === 'development' || published;
+    // Return true if the file is published or in development
+    return env.NODE_ENV === 'development' || published;
   } catch (error) {
     console.warn(
       `Warning: Could not read published status for ${filePath}`,
       error
     );
-    return process.env.NODE_ENV === 'development';
+    return env.NODE_ENV === 'development';
   }
 }
 

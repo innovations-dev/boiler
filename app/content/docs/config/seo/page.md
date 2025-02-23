@@ -90,7 +90,7 @@ Unlike traditional robots.txt files, this boilerplate manages robot directives t
 robots: {
   index: true,
   follow: true,
-  nocache: process.env.NODE_ENV !== 'production',
+  nocache: env.NODE_ENV !== 'production',
   googleBot: {
     index: true,
     follow: true,

@@ -8,6 +8,7 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { Robots } from 'next/dist/lib/metadata/types/metadata-types';
 
 import { BASE_URL } from '@/lib/utils';
+import { env } from 'process';
 
 /**
  * @interface MetaProps
@@ -153,7 +154,7 @@ export async function generateMetadata(
       index: !noIndex,
       follow: !noIndex,
       // TODO: move to @t3oss/env config
-      nocache: process.env.NODE_ENV !== 'production',
+      nocache: env.NODE_ENV !== 'production',
       googleBot: {
         index: !noIndex,
         follow: !noIndex,
@@ -204,7 +205,7 @@ export async function generateMetadata(
     verification: {
       ...siteConfig.default.verification,
       // TODO: move to @t3oss/env config
-      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+      google: env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
     },
 
     // Enhanced alternates handling
