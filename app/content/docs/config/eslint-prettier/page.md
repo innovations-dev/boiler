@@ -1,0 +1,279 @@
+---
+title: ESLint & Prettier Configuration
+description: Learn about our code quality and formatting setup
+date: 2025-02-23
+published: true
+---
+
+# ESLint & Prettier Configuration
+
+## Introduction
+
+This boilerplate uses ESLint and Prettier to ensure consistent code quality and formatting across your project. Our setup is optimized for TypeScript, React, and Next.js development with modern best practices, using the new flat config system for ESLint.
+
+## Core Configuration
+
+### ESLint Setup
+
+The ESLint configuration is managed through `eslint.config.mjs` using the new flat config system:
+
+```javascript
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { FlatCompat } from '@eslint/eslintrc';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends('next/core-web-vitals', 'next/typescript', 'prettier'),
+  {
+    rules: {
+      '@next/next/no-html-link-for-pages': 'off',
+      'react/jsx-key': 'off',
+    },
+  },
+];
+
+export default eslintConfig;
+```
+
+Key features of our ESLint configuration:
+
+- Uses the modern flat config system
+- Extends Next.js core web vitals and TypeScript configurations
+- Integrates with Prettier for formatting
+- Disables specific rules that conflict with our setup
+
+### Prettier Setup
+
+Our Prettier configuration in `.prettierrc.js` is comprehensive, handling both code formatting and import sorting:
+
+```javascript
+module.exports = {
+  semi: true,
+  singleQuote: true,
+  trailingComma: 'es5',
+  printWidth: 80,
+  tabWidth: 2,
+  useTabs: false,
+  plugins: [
+    'prettier-plugin-tailwindcss',
+    '@ianvs/prettier-plugin-sort-imports',
+  ],
+  tailwindConfig: './tailwind.config.ts',
+  tailwindFunctions: ['clsx', 'cn', 'twMerge'],
+  importOrder: [
+    '^(react/(.*)$)|^(react$)',
+    '^(next/(.*)$)|^(next$)',
+    '<THIRD_PARTY_MODULES>',
+    '',
+    '^@/(.*)$',
+    '',
+    '^[./]',
+    '',
+    '^@/components/(.*)$',
+    '',
+    '^@/lib/(.*)$',
+    '',
+    '^@/utils/(.*)$',
+  ],
+  importOrderParserPlugins: ['typescript', 'jsx', 'decorators-legacy'],
+  importOrderTypeScriptVersion: '5.0.0',
+};
+```
+
+## Features
+
+### 1. Modern ESLint Configuration
+
+- Uses the new ESLint flat config system
+- Integrates Next.js recommended rules
+- TypeScript-aware linting
+- Automatic Prettier integration
+
+### 2. Advanced Import Management
+
+Our setup uses `@ianvs/prettier-plugin-sort-imports` for sophisticated import ordering:
+
+1. React imports
+2. Next.js imports
+3. Third-party modules
+4. Internal aliases (@/...)
+5. Relative imports
+6. Component imports
+7. Library imports
+8. Utility imports
+
+### 3. Tailwind CSS Integration
+
+- Automatic class sorting with `prettier-plugin-tailwindcss`
+- Support for utility functions (`clsx`, `cn`, `twMerge`)
+- Integration with Tailwind configuration
+
+### 4. Ignored Files
+
+Our `.prettierignore` configuration excludes unnecessary files:
+
+```text
+# Build output
+.next
+dist
+out
+
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Misc
+.DS_Store
+.env*
+!.env.example
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Cache
+.vercel
+.turbo
+```
+
+## Usage
+
+### Running Linting and Formatting
+
+```bash
+# Check for linting issues
+pnpm lint
+
+# Format code with Prettier
+pnpm format
+```
+
+### VS Code Integration
+
+1. Install required extensions:
+
+   - ESLint
+   - Prettier
+   - TypeScript and JavaScript Language Features
+   - Tailwind CSS IntelliSense
+
+2. Workspace Settings
+
+The boilerplate includes pre-configured VS Code settings in `.vscode/settings.json`:
+
+```json
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.wordWrap": "on",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "tailwindCSS.experimental.classRegex": [
+    ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}
+```
+
+Key features of our VS Code configuration:
+
+1. **Formatting**
+
+   - Uses Prettier as the default formatter
+   - Enables format on save
+   - Sets consistent tab size (2 spaces)
+   - Enables explicit ESLint fixes on save
+
+2. **TypeScript**
+
+   - Uses workspace TypeScript version
+   - Enables workspace TypeScript SDK prompts
+
+3. **Tailwind CSS**
+
+   - Configures class name regex for utility functions (`clsx`, `cn`)
+   - Sets proper file associations for CSS files
+   - Enables IntelliSense for Tailwind classes
+
+4. **Editor Experience**
+   - Enables word wrap for better code readability
+   - Configures automatic ESLint fixes
+
+For personal settings, you can override these in your user `settings.json`, but we recommend keeping the workspace settings for consistency across the team.
+
+## Customization
+
+### Extending ESLint Rules
+
+Add new rules to `eslint.config.mjs`:
+
+```javascript
+const eslintConfig = [
+  ...compat.extends('next/core-web-vitals', 'next/typescript', 'prettier'),
+  {
+    rules: {
+      // Add your custom rules here
+      'your-rule': 'error',
+    },
+  },
+];
+```
+
+### Modifying Import Order
+
+Customize import ordering in `.prettierrc.js`:
+
+```javascript
+{
+  importOrder: [
+    // Modify the array to change import ordering
+    '^(react/(.*)$)|^(react$)',
+    // Add your custom patterns
+  ];
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **ESLint and Prettier Conflicts**
+
+   - Ensure ESLint config extends Prettier last
+   - Check for conflicting rules
+   - Verify VS Code settings
+
+2. **Import Sorting Issues**
+
+   - Check `importOrder` configuration
+   - Verify `importOrderParserPlugins` includes necessary parsers
+   - Ensure TypeScript version matches your project
+
+3. **Tailwind Class Sorting Issues**
+   - Verify `prettier-plugin-tailwindcss` is properly configured
+   - Check `tailwindConfig` path is correct
+   - Ensure `tailwindFunctions` includes all utility functions
+
+## Resources
+
+- [ESLint Flat Config](https://eslint.org/docs/latest/use/configure/configuration-files-new)
+- [Prettier Documentation](https://prettier.io/)
+- [Next.js ESLint](https://nextjs.org/docs/basic-features/eslint)
+- [prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss)
+- [@ianvs/prettier-plugin-sort-imports](https://github.com/ianvs/prettier-plugin-sort-imports)
