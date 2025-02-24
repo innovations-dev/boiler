@@ -4,11 +4,11 @@
  * @module config/meta.config
  */
 
+import { env } from 'process';
 import { Metadata, ResolvingMetadata } from 'next';
 import { Robots } from 'next/dist/lib/metadata/types/metadata-types';
 
 import { BASE_URL } from '@/lib/utils';
-import { env } from 'process';
 
 /**
  * @interface MetaProps
@@ -153,7 +153,6 @@ export async function generateMetadata(
       ...(siteConfig.default.robots as Robots),
       index: !noIndex,
       follow: !noIndex,
-      // TODO: move to @t3oss/env config
       nocache: env.NODE_ENV !== 'production',
       googleBot: {
         index: !noIndex,
@@ -204,7 +203,6 @@ export async function generateMetadata(
     // Enhanced verification handling
     verification: {
       ...siteConfig.default.verification,
-      // TODO: move to @t3oss/env config
       google: env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
     },
 

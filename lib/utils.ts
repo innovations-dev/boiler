@@ -1,12 +1,12 @@
-import { env } from '@/env';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+
+import { env } from '@/env';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// TODO: move to @t3oss/env config
 export const BASE_URL = new URL(env.NEXT_PUBLIC_APP_URL || '');
 
 /**
