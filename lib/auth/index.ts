@@ -53,6 +53,7 @@ export const auth = betterAuth({
     ...(betterAuthPlugins ?? []),
     customSession(
       async ({ user, session }) => {
+        console.log('🚀 ~ customSession ~ user:', session);
         try {
           const activeOrganization = await getActiveOrganization({
             userId: user.id,
