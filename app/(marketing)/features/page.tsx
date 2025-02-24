@@ -14,7 +14,7 @@ export default function FeaturesPage() {
     <div className="container mx-auto mt-[var(--header-height)] max-w-7xl px-4 py-16">
       <div className="space-y-12">
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mt-24">
             Powerful Features for Modern Web Development
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
@@ -22,7 +22,6 @@ export default function FeaturesPage() {
             Next.js 15
           </p>
         </div>
-
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <FeatureCard key={feature.title} {...feature} />
