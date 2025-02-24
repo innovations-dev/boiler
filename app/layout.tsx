@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+
 import './globals.css';
-import { ThemeProvider } from './_providers/theme-provider';
-import { SkipNav } from './_components/root-layout/skip-nav';
+
 import { Toaster } from 'sonner';
-import { ThemeToggle } from './_components/root-layout/theme-toggle';
+
 import { generateMetadata as meta } from '@/config/meta.config';
+import { ErrorHandler } from '@/lib/auth/error/error-handler';
+
+import { SkipNav } from './_components/root-layout/skip-nav';
+import { ThemeToggle } from './_components/root-layout/theme-toggle';
+import { ThemeProvider } from './_providers/theme-provider';
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -16,7 +22,7 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   return meta({
     title: 'Boiler15 002',
     description: 'Build anything, fast.',
@@ -46,6 +52,7 @@ export default function RootLayout({
           </div>
           <Toaster richColors />
         </ThemeProvider>
+        <ErrorHandler />
       </body>
     </html>
   );
