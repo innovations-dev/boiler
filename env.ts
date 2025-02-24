@@ -22,8 +22,8 @@ export const env = createEnv({
     // RESEND_API_KEY: z.string(),
     // EMAIL_FROM: z.string(),
     // TEST_EMAIL: z.string(),
-    // TURSO_DATABASE_URL: z.string(),
-    // TURSO_AUTH_TOKEN: z.string(),
+    TURSO_DATABASE_URL: z.string(),
+    TURSO_AUTH_TOKEN: z.string(),
   },
 
   /**
