@@ -84,12 +84,3 @@ export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
   OWNER: 'Owner',
   MEMBER: 'Member',
 };
-
-/**
- * Authentication mode type
- * @enum {string}
- * @readonly
- *
- * Used by: auth UI
- */
-export type AuthMode = 'magic-link' | 'register' | 'password';

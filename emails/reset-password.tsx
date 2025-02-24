@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 import {
   Body,
   Container,
@@ -12,11 +12,11 @@ import {
   Section,
   Tailwind,
   Text,
-} from "@react-email/components";
-import { render } from "@react-email/render";
+} from '@react-email/components';
+import { render } from '@react-email/render';
 
-import { baseURL } from "@/lib/utils";
-import tailwindConfig from "@/tailwind.config";
+import { getBaseUrl } from '@/lib/utils';
+import tailwindConfig from '@/tailwind.config';
 
 interface ResetPasswordEmailProps {
   url: string;
@@ -27,6 +27,7 @@ export default function ResetPasswordEmail({
   url,
   expiryTime,
 }: ResetPasswordEmailProps) {
+  const baseURL = getBaseUrl().toString();
   return (
     <Html>
       <Head />
@@ -86,14 +87,14 @@ export default function ResetPasswordEmail({
                 <Link href={`${baseURL}`} className="text-[#666666] underline">
                   Your Company, Inc
                 </Link>
-                {" • "}
+                {' • '}
                 <Link
                   href={`${baseURL}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy Policy
                 </Link>
-                {" • "}
+                {' • '}
                 <Link
                   href={`${baseURL}/terms`}
                   className="text-[#666666] underline"

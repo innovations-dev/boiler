@@ -48,9 +48,10 @@ export const authClient = createAuthClient({
   trustedOrigins: [baseURL.toString()],
   fetchOptions: {
     credentials: 'include',
-    onError: (error: unknown) => {
-      console.error('BetterAuth error', error);
-    },
+    // TODO: Fix error handling
+    // onError: (error: unknown) => {
+    //   console.error('BetterAuth error', error);
+    // },
   },
   plugins: [
     magicLinkClient(),

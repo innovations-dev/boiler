@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 
 import './globals.css';
 
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from 'sonner';
 
 import { generateMetadata as meta } from '@/config/meta.config';
@@ -39,19 +40,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-dvh scroll-smooth font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SkipNav />
-          <div id="main-root">{children}</div>
-          <div className="fixed bottom-4 right-4">
-            <ThemeToggle />
-          </div>
-          <Toaster richColors />
-        </ThemeProvider>
+        <NuqsAdapter>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SkipNav />
+            <div id="main-root">{children}</div>
+            <div className="fixed bottom-4 right-4">
+              <ThemeToggle />
+            </div>
+            <Toaster richColors />
+          </ThemeProvider>
+        </NuqsAdapter>
         <ErrorHandler />
       </body>
     </html>
