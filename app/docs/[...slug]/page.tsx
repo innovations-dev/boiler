@@ -1,13 +1,15 @@
-import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
-import { generateMetadata as baseGenerateMetadata } from "@/config/meta.config";
-import { generateStaticParams } from "../_utils/generate-static-params";
+import { generateMetadata as baseGenerateMetadata } from '@/config/meta.config';
+import { logger } from '@/lib/logger';
+
+import { generateStaticParams } from '../_utils/generate-static-params';
 
 export { generateStaticParams };
 
 // Enable static generation
-export const dynamic = "force-static";
+export const dynamic = 'force-static';
 export const revalidate = false;
 
 interface PageProps {
@@ -23,19 +25,19 @@ export async function generateMetadata({
 
   try {
     const { metadata } = await import(
-      `@/content/docs/${resolvedParams.slug.join("/")}/page.mdx`
+      `@/content/docs/${resolvedParams.slug.join('/')}/page.mdx`
     );
 
     return baseGenerateMetadata({
       title: metadata?.title,
       description: metadata?.description,
-      path: `/docs/${resolvedParams.slug.join("/")}`,
+      path: `/docs/${resolvedParams.slug.join('/')}`,
     });
   } catch (error) {
     return baseGenerateMetadata({
-      title: "Documentation",
-      description: "Nextjs v15 Boilerplate Documentation",
-      path: `/docs/${resolvedParams.slug.join("/")}`,
+      title: 'Documentation',
+      description: 'Nextjs v15 Boilerplate Documentation',
+      path: `/docs/${resolvedParams.slug.join('/')}`,
     });
   }
 }
@@ -49,7 +51,7 @@ export default async function DocPage({ params }: PageProps) {
 
   try {
     const { default: MDXContent, metadata } = await import(
-      `@/content/docs/${resolvedParams.slug.join("/")}/page.mdx`
+      `@/content/docs/${resolvedParams.slug.join('/')}/page.mdx`
     );
 
     return (
@@ -61,7 +63,14 @@ export default async function DocPage({ params }: PageProps) {
       </article>
     );
   } catch (error) {
-    console.error("Failed to import MDX:", error);
+    logger.error(
+      'Failed to import MDX content',
+      {
+        component: 'DocsPage',
+        path: resolvedParams.slug.join('/'),
+      },
+      error
+    );
     notFound();
   }
 }

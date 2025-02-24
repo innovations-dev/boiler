@@ -5,6 +5,8 @@ import { AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { handleUnknownError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 /**
  * @fileoverview React component for handling and displaying route errors in Next.js applications.
@@ -265,9 +267,19 @@ export function RouteError({
   variant = 'default',
 }: RouteErrorProps) {
   useEffect(() => {
-    // Log the error to console
-    console.error('Route error:', error);
-  }, [error]);
+    const appError = handleUnknownError(error);
+    logger.error(
+      'Route error occurred',
+      {
+        component: 'RouteError',
+        variant,
+        errorCode: appError.code,
+        errorStatus: appError.status,
+        path: window.location.pathname,
+      },
+      error
+    );
+  }, [error, variant]);
 
   // TODO: Handle ApiError - Add error handling / logger
   // if (error instanceof ApiError) {

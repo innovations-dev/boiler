@@ -14,6 +14,7 @@ import { env } from '@/env';
 
 import { db } from '../db';
 import * as schema from '../db/schema';
+import { logger } from '../logger';
 import { getBaseUrl } from '../utils';
 import { getActiveOrganization } from './database-hooks';
 import { adminConfig, magicLinkConfig, organizationConfig } from './plugins';
@@ -34,7 +35,14 @@ const betterAuthOptions: BetterAuthOptions = {
   onAPIError: {
     throw: true,
     onError: (error: unknown, ctx: AuthContext) => {
-      console.error('BetterAuth error', error, ctx);
+      logger.error(
+        'Better-Auth error occurred',
+        {
+          component: 'BetterAuth',
+          context: ctx,
+        },
+        error
+      );
     },
   },
 };
@@ -53,7 +61,7 @@ export const auth = betterAuth({
     ...(betterAuthPlugins ?? []),
     customSession(
       async ({ user, session }) => {
-        console.log('🚀 ~ customSession ~ user:', session);
+        logger.debug('🚀 ~ customSession ~ user:', session);
         try {
           const activeOrganization = await getActiveOrganization({
             userId: user.id,
@@ -70,7 +78,14 @@ export const auth = betterAuth({
             // activeWorkspaceId: activeWorkspace?.id, // TODO: is this correct?
           };
         } catch (error) {
-          console.error('customSession error:', error);
+          logger.error(
+            'customSession error:',
+            {
+              component: 'CustomSession',
+              userId: user?.id,
+            },
+            error
+          );
           return {
             session,
             user,

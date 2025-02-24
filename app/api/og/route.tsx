@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+import { logger } from '@/lib/logger';
+
 export const runtime = 'edge';
 
 export async function GET(request: Request) {
@@ -57,12 +59,12 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    console.error(
+    logger.error(
+      'Error generating OG image',
       {
-        message: 'Error generating OG image',
-        context: 'api/og',
+        component: 'OGImage',
+        path: 'api/og',
         url: request.url,
-        error,
       },
       error
     );

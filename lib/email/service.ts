@@ -11,6 +11,7 @@ import MagicLinkEmail from '@/emails/magic-link';
 import ResetPasswordEmail from '@/emails/reset-password';
 import VerificationEmail from '@/emails/verification-email';
 
+import { logger } from '../logger';
 import type { EmailOptions, EmailResult } from '../types/email';
 import { EmailDeliveryError, EmailRateLimitError } from '../types/email/error';
 import { resend } from './';
@@ -88,21 +89,25 @@ const templateComponents = {
  * });
  */
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
-  console.log('Sending email to', options.to);
+  logger.info('Sending email', {
+    component: 'EmailService',
+    template: options.template,
+    to: options.to.split('@')[0] + '@***', // Mask email in logs
+  });
+
   try {
     const template = templateComponents[options.template];
     if (!template) {
       throw new Error(`Invalid email template: ${options.template}`);
     }
-    console.log('Template:', template);
+
     const templateConfig = emailConfig.templates[options.template];
     const element = createElement(
       template as React.ComponentType<TemplateProps[typeof options.template]>,
       options.data as TemplateProps[typeof options.template]
     );
-    console.log('Created element:');
+
     const html = await render(element);
-    console.log('Created HTML:');
     const result = await resend.emails.send({
       from: emailConfig.from,
       to: options.to,
@@ -113,11 +118,10 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
       html,
     });
 
-    // Log success (omit sensitive data)
-    console.log('Email sent successfully:', {
+    logger.info('Email sent successfully', {
+      component: 'EmailService',
       template: options.template,
       to: options.to.split('@')[0] + '@***',
-      timestamp: new Date().toISOString(),
     });
 
     return { success: true, data: result };
@@ -125,6 +129,16 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     if (error instanceof Error && error.message.includes('rate limit')) {
       throw new EmailRateLimitError('Email rate limit exceeded');
     }
+
+    logger.error(
+      'Failed to send email',
+      {
+        component: 'EmailService',
+        template: options.template,
+        to: options.to.split('@')[0] + '@***',
+      },
+      error
+    );
 
     throw new EmailDeliveryError(
       'Failed to send email',

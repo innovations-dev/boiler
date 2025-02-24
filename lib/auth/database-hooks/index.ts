@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 
 import { db } from '@/lib/db';
 import { member, organization } from '@/lib/db/schema';
+import { logger } from '@/lib/logger';
 import { getBaseUrl } from '@/lib/utils';
 
 function createPersonalOrganization(userId: string) {
@@ -69,14 +70,17 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
           });
 
           if (!response.ok) {
-            // TODO: replace with logger
             throw new Error('Failed to set active organization');
           }
           return;
         } catch (error) {
-          // TODO: replace with logger
-          console.error(
-            'hook:session:create:after:: Error setting active organization',
+          logger.error(
+            'Failed to set active organization',
+            {
+              component: 'DatabaseHooks',
+              path: 'auth/database-hooks',
+              hook: 'session:create:after',
+            },
             error
           );
           return;
@@ -110,7 +114,15 @@ export const getActiveOrganization = async ({ userId }: { userId: string }) => {
 
     return memberWithOrg?.organization ?? null;
   } catch (error) {
-    console.error('Failed to get active organization:', error);
+    logger.error(
+      'Failed to get active organization',
+      {
+        component: 'DatabaseHooks',
+        path: 'auth/database-hooks',
+        userId,
+      },
+      error
+    );
     return null;
   }
 };

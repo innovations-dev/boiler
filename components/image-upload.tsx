@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { Button } from './ui/button';
@@ -55,7 +56,15 @@ export function ImageUpload({
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        console.error('Error converting image:', error);
+        logger.error(
+          'Failed to process image upload',
+          {
+            component: 'ImageUpload',
+            fileType: file.type,
+            fileSize: file.size,
+          },
+          error
+        );
         toast.error('Error processing image');
       }
     },

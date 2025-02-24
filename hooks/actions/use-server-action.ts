@@ -5,6 +5,9 @@ import { useTransition } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { auditLogger } from '@/lib/audit';
+import { handleUnknownError, ValidationError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { ApiResponse } from '@/lib/types/auth/requests';
 
 // Better-Auth specific response types
@@ -18,35 +21,45 @@ type BetterAuthErrorCode =
   | 'UNKNOWN_ERROR'
   | 'FETCH_ERROR';
 
-type BetterAuthError = {
-  code?: BetterAuthErrorCode;
-  message?: string;
-  statusCode?: number;
-};
+interface BetterAuthError {
+  error: {
+    message: string;
+    statusCode: number;
+  };
+}
 
-type Data<T> = T & { status: boolean };
-type Error$1<T> = { error: T };
-export type BetterAuthResponse<T> = Data<T> | Error$1<BetterAuthError>;
+type BetterAuthSuccess<T> = T;
+type BetterAuthResponse<T> = BetterAuthSuccess<T> | BetterAuthError;
 
 interface UseServerActionOptions<TData, TInput> {
-  // The server action to execute
   action: (
     input: TInput
   ) => Promise<ApiResponse<TData> | BetterAuthResponse<TData>>;
-  // Optional success callback
   onSuccess?: (data: TData) => void | Promise<void>;
-  // Optional error callback
   onError?: (error: Error) => void | Promise<void>;
-  // Optional validation schema for input
-  schema?: z.ZodType<TInput>;
-  // Context for error logging
+  schema?: z.ZodSchema<TInput>;
   context?: string;
-  // Custom success message
   successMessage?: string;
-  // Custom error message
   errorMessage?: string;
-  // Optional form reset function
   resetForm?: () => void;
+}
+
+function isBetterAuthError(response: unknown): response is BetterAuthError {
+  if (!response || typeof response !== 'object') return false;
+  const maybeError = response as BetterAuthError;
+  return (
+    'error' in maybeError &&
+    typeof maybeError.error === 'object' &&
+    maybeError.error !== null &&
+    'message' in maybeError.error &&
+    'statusCode' in maybeError.error
+  );
+}
+
+function isApiResponse<T>(response: unknown): response is ApiResponse<T> {
+  return (
+    typeof response === 'object' && response !== null && 'success' in response
+  );
 }
 
 function handleError(
@@ -55,63 +68,66 @@ function handleError(
   errorMessage: string,
   onError?: (error: Error) => void | Promise<void>
 ) {
-  console.error(`Server action error [${context}]:`, error);
-  toast.error(error instanceof Error ? error.message : errorMessage);
-  if (onError && error instanceof Error) {
-    void onError(error);
+  const appError = handleUnknownError(error);
+
+  logger.error(
+    errorMessage,
+    {
+      component: 'ServerAction',
+      context,
+      errorCode: appError.code,
+      errorStatus: appError.status,
+    },
+    appError
+  );
+
+  toast.error(appError.message || errorMessage);
+
+  if (onError) {
+    void onError(appError);
   }
 }
 
-function handleSuccess(
-  response: { message?: string },
+function handleSuccess<T>(
+  response: ApiResponse<T>,
   successMessage?: string,
-  onSuccess?: (data: any) => void | Promise<void>,
+  onSuccess?: (data: T) => void | Promise<void>,
   resetForm?: () => void
 ) {
-  if (successMessage || response.message) {
-    toast.success(successMessage || response.message);
+  if (successMessage) {
+    toast.success(successMessage);
   }
   if (onSuccess) {
-    void onSuccess(response);
+    void onSuccess(response.data);
   }
-  resetForm?.();
-}
-
-function isBetterAuthResponse<T>(
-  response: unknown
-): response is BetterAuthResponse<T> {
-  return (
-    typeof response === 'object' &&
-    response !== null &&
-    !('success' in response) &&
-    ('error' in response || 'status' in response)
-  );
+  if (resetForm) {
+    resetForm();
+  }
 }
 
 function normalizeResponse<T>(
   response: ApiResponse<T> | BetterAuthResponse<T>
 ): ApiResponse<T> {
-  if (isBetterAuthResponse(response)) {
-    const isError = 'error' in response;
-
-    if (isError && response.error) {
-      return {
-        success: false,
-        data: {} as T,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: response.error.message || 'An error occurred',
-          status: response.error.statusCode || 400,
-        },
-      };
-    }
-
+  if (isBetterAuthError(response)) {
     return {
-      success: true,
-      data: response as T,
+      success: false,
+      data: {} as T,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: response.error.message,
+        status: response.error.statusCode,
+      },
     };
   }
-  return response;
+
+  if (isApiResponse<T>(response)) {
+    return response;
+  }
+
+  return {
+    success: true,
+    data: response as T,
+  };
 }
 
 /**
@@ -188,7 +204,21 @@ export function useServerAction<TData, TInput>({
 
   const execute = async (input: TInput) => {
     try {
-      if (schema) input = schema.parse(input);
+      // Validate input if schema is provided
+      if (schema) {
+        try {
+          input = schema.parse(input);
+        } catch (validationError) {
+          if (validationError instanceof z.ZodError) {
+            const error = new ValidationError('Validation failed', {
+              zodError: validationError,
+            });
+            handleError(error, context, errorMessage, onError);
+            return;
+          }
+        }
+      }
+
       const response = normalizeResponse(await action(input));
 
       if (!response.success) {
@@ -197,18 +227,23 @@ export function useServerAction<TData, TInput>({
       }
 
       handleSuccess(response, successMessage, onSuccess, resetForm);
+
+      // Log successful action
+      auditLogger.logDataChange('data.update', {
+        component: 'ServerAction',
+        context,
+        action: context,
+      });
     } catch (error) {
-      console.error(`Server action error [${context}]:`, error);
-      console.error(
-        {
-          context,
-          errorMessage,
-        },
-        error
-      );
-      onError?.(error as Error);
+      handleError(error, context, errorMessage, onError);
     }
   };
 
-  return { execute, isPending };
+  const wrappedExecute = (input: TInput) => {
+    startTransition(() => {
+      void execute(input);
+    });
+  };
+
+  return { execute: wrappedExecute, isPending };
 }

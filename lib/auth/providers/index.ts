@@ -2,6 +2,7 @@ import { BetterAuthOptions, User } from 'better-auth';
 
 import { env } from '@/env';
 import { sendEmail } from '@/lib/email/service';
+import { logger } from '@/lib/logger';
 import { getBaseUrl } from '@/lib/utils';
 
 const baseURL = getBaseUrl().toString();
@@ -20,8 +21,13 @@ export const providers: BetterAuthOptions = {
     maxPasswordLength: 100,
     minPasswordLength: 8,
     async sendResetPassword({ user, url }: { user: User; url: string }) {
-      console.log('Sending reset password email to', user.email, url);
       try {
+        logger.info('Sending reset password email', {
+          component: 'AuthProviders',
+          path: 'auth/providers',
+          email: user.email,
+        });
+
         await sendEmail({
           to: user.email,
           template: 'RESET_PASSWORD',
@@ -30,17 +36,29 @@ export const providers: BetterAuthOptions = {
         });
         return;
       } catch (error) {
-        console.error('Failed to send reset password email', error);
+        logger.error(
+          'Failed to send reset password email',
+          {
+            component: 'AuthProviders',
+            path: 'auth/providers',
+            email: user.email,
+          },
+          error
+        );
         return;
       }
-      return;
     },
   },
   emailVerification: {
     autoSignInAfterVerification: true,
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
-      console.log('Sending verification email to', user.email, url);
+      logger.info('Sending verification email', {
+        component: 'AuthProviders',
+        path: 'auth/providers',
+        email: user.email,
+      });
+
       await sendEmail({
         to: user.email,
         template: 'VERIFICATION',

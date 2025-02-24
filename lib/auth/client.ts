@@ -13,6 +13,8 @@ import {
 } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 
+import { logger } from '@/lib/logger';
+
 import { auth } from '../auth';
 import { getBaseUrl } from '../utils';
 
@@ -48,10 +50,16 @@ export const authClient = createAuthClient({
   trustedOrigins: [baseURL.toString()],
   fetchOptions: {
     credentials: 'include',
-    // TODO: Fix error handling
-    // onError: (error: unknown) => {
-    //   console.error('BetterAuth error', error);
-    // },
+    onError: (error: unknown) => {
+      logger.error(
+        'BetterAuth error',
+        {
+          component: 'AuthClient',
+          path: 'auth/client',
+        },
+        error
+      );
+    },
   },
   plugins: [
     magicLinkClient(),

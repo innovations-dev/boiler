@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { handleUnknownError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface ErrorBoundaryProps {
   error: Error;
@@ -21,15 +23,18 @@ export function ErrorBoundary({
   variant = 'default',
 }: ErrorBoundaryProps) {
   useEffect(() => {
-    // TODO: Add error handling / logger
-    console.error(
+    const appError = handleUnknownError(error);
+    logger.error(
+      'Error boundary caught an error',
       {
-        context: 'GlobalErrorBoundary',
-        defaultMessage: 'An unexpected error occurred',
+        component: 'ErrorBoundary',
+        variant,
+        errorCode: appError.code,
+        errorStatus: appError.status,
       },
       error
     );
-  }, [error]);
+  }, [error, variant]);
 
   if (variant === 'full') {
     return (

@@ -5,6 +5,8 @@ import { sendEmail } from '@/lib/email/service';
 import { EmailRateLimitError } from '@/lib/types/email/error';
 import { getBaseUrl } from '@/lib/utils';
 
+import { logger } from '../../logger';
+
 const baseURL = getBaseUrl().toString();
 
 export const adminConfig = {
@@ -37,12 +39,12 @@ export const organizationConfig: OrganizationOptions = {
         throw result.error;
       }
 
-      // Log successful invitation email sent (without sensitive data)
-      console.log('Organization invitation email sent successfully:', {
+      logger.info('Organization invitation email sent', {
+        component: 'OrganizationPlugin',
+        action: 'sendInvitationEmail',
+        organizationId: data.organization.id,
+        inviterId: data.inviter.userId,
         to: data.email.split('@')[0] + '@***',
-        organization: data.organization.name,
-        invitedBy: data.inviter.userId,
-        timestamp: new Date().toISOString(),
       });
       return;
     } catch (error) {
@@ -53,12 +55,16 @@ export const organizationConfig: OrganizationOptions = {
         });
       }
 
-      // Log the error with appropriate context
-      console.error('Failed to send organization invitation email:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        organization: data.organization.name,
-        timestamp: new Date().toISOString(),
-      });
+      logger.error(
+        'Failed to send organization invitation email',
+        {
+          component: 'OrganizationPlugin',
+          action: 'sendInvitationEmail',
+          organizationId: data.organization.id,
+          inviterId: data.inviter.userId,
+        },
+        error
+      );
 
       // Throw appropriate auth error
       throw new BetterAuthAPIError('INTERNAL_SERVER_ERROR', {
@@ -70,7 +76,10 @@ export const organizationConfig: OrganizationOptions = {
 
 export const magicLinkConfig = {
   sendMagicLink: async ({ email, url }: { email: string; url: string }) => {
-    console.log('Sending magic link to', email, url);
+    logger.info('Sending magic link', {
+      component: 'MagicLinkPlugin',
+      to: email.split('@')[0] + '@***',
+    });
     try {
       const result = await sendEmail({
         to: email,
@@ -88,12 +97,14 @@ export const magicLinkConfig = {
           cause: 'Too many login attempts. Please try again later.',
         });
       }
-      console.error('Failed to send login email:', {
-        error: error instanceof Error ? JSON.stringify(error) : 'Unknown error',
-        email,
-        url,
-        timestamp: new Date().toISOString(),
-      });
+      logger.error(
+        'Failed to send login email',
+        {
+          component: 'MagicLinkPlugin',
+          to: email.split('@')[0] + '@***',
+        },
+        error
+      );
       throw new BetterAuthAPIError('INTERNAL_SERVER_ERROR', {
         cause: 'Failed to send login email. Please try again later.',
       });

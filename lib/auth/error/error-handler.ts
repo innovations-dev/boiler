@@ -10,6 +10,15 @@ import React, { useEffect } from 'react';
 import { APIError as BetterAuthAPIError } from 'better-auth/api';
 import { toast } from 'sonner';
 
+import { auditLogger } from '@/lib/audit';
+import { AuthenticationError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+interface EnhancedBetterAuthAPIError extends BetterAuthAPIError {
+  code?: string;
+  statusCode?: number;
+}
+
 /**
  * Global error handler component for catching and handling authentication errors
  * on the client side. Prevents default error behavior and displays user-friendly
@@ -56,9 +65,40 @@ export const ErrorHandler: React.FC = () => {
       const error = 'error' in event ? event.error : event.reason;
 
       if (error instanceof BetterAuthAPIError) {
-        const message = error.message || 'An authentication error occurred';
-        toast.error(message);
-        return error;
+        const betterAuthError = error as EnhancedBetterAuthAPIError;
+        const authError = new AuthenticationError(
+          betterAuthError.message || 'An authentication error occurred',
+          {
+            betterAuthCode: betterAuthError.code,
+            betterAuthStatus: betterAuthError.statusCode,
+          }
+        );
+
+        // Log the authentication error
+        logger.error(
+          'Authentication error occurred',
+          {
+            component: 'AuthErrorHandler',
+            betterAuthCode: betterAuthError.code,
+            betterAuthStatus: betterAuthError.statusCode,
+          },
+          authError
+        );
+
+        // Create an audit log for failed authentication
+        auditLogger.logAuth(
+          'user.login',
+          {
+            status: 'failure',
+            errorCode: betterAuthError.code,
+            errorMessage: betterAuthError.message,
+          },
+          authError
+        );
+
+        // Show user-friendly toast
+        toast.error(authError.message);
+        return authError;
       }
     };
 

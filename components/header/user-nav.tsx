@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { navigationRoutes } from '@/config/routes.config';
 import { authClient } from '@/lib/auth/client';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { Spinner } from '../spinner';
@@ -21,19 +22,37 @@ function UserNavContent({ items }: { items: typeof navigationRoutes.auth }) {
   }
 
   if (error) {
-    console.error(error);
+    logger.error(
+      'Error in UserNav',
+      {
+        component: 'UserNav',
+      },
+      error
+    );
     toast.error(error?.message || 'Error');
     return <div>Error</div>;
   }
 
   if (!error && data?.session && data?.user) {
+    const handleSignOut = async () => {
+      try {
+        await authClient.signOut();
+      } catch (error) {
+        logger.error(
+          'Failed to sign out',
+          {
+            component: 'UserNav',
+          },
+          error
+        );
+        toast.error('Failed to sign out');
+      }
+    };
+
     return (
       <Button
         className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
-        onClick={() => {
-          authClient.signOut();
-          router.push('/');
-        }}
+        onClick={handleSignOut}
       >
         Sign out
       </Button>

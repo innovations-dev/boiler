@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { logger } from '@/lib/logger';
 
 export default function Error({
   error,
@@ -12,8 +13,15 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Navigation error:', error);
+    logger.error(
+      'Documentation navigation error',
+      {
+        component: 'DocsError',
+        path: window.location.pathname,
+        digest: error.digest,
+      },
+      error
+    );
   }, [error]);
 
   return (
