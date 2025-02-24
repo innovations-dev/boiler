@@ -4,11 +4,11 @@ import Link from 'next/link';
 
 import { AuthForm } from '@/app/(auth)/_components/auth-form';
 import { SocialAuthButtons } from '@/app/(auth)/_components/social-auth-buttons';
+import { Spinner } from '@/components/spinner';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import { SignInHeading } from '../_components/heading';
-import { Spinner } from '../../_components/spinner';
 
 export const metadata: Metadata = {
   title: 'Sign In',
@@ -21,7 +21,7 @@ export default function SignInPage() {
       <div className="container relative grid min-h-screen flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0">
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
           <div className="absolute inset-0 bg-zinc-900" />
-          <div className="relative z-20 mt-24 flex items-center text-lg font-medium">
+          <div className="relative z-10 mt-24 flex items-center text-lg font-medium">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
