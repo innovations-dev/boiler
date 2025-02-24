@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio --config=./config/drizzle/drizzle-dev.config.ts",
     "db:prod:studio": "drizzle-kit studio --config=./config/drizzle/drizzle-prod.config.ts",
     "auth:generate": "npx @better-auth/cli@latest generate",
-    "auth:migrate": "npx @better-auth/cli@latest migrate"
+    "auth:migrate": "npx @better-auth/cli@latest migrate",
+    "mail:dev": "email dev --port 3001"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
@@ -26,6 +27,8 @@
     "@mdx-js/react": "^3.1.0",
     "@next/mdx": "^15.1.7",
     "@radix-ui/react-slot": "^1.1.2",
+    "@react-email/components": "^0.0.33",
+    "@react-email/render": "^1.0.5",
     "@t3-oss/env-nextjs": "^0.12.0",
     "better-auth": "^1.1.19",
     "class-variance-authority": "^0.7.1",
@@ -38,6 +41,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remark-gfm": "^4.0.1",
+    "resend": "^4.1.2",
     "sonner": "^2.0.1",
     "sugar-high": "^0.9.2",
     "tailwind-merge": "^3.0.2",
@@ -59,6 +63,7 @@
     "postcss": "^8",
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.11",
+    "react-email": "3.0.7",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
