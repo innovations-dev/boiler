@@ -41,8 +41,8 @@ const betterAuthOptions: BetterAuthOptions = {
 
 const betterAuthPlugins: BetterAuthOptions['plugins'] = [
   admin(adminConfig),
-  organization(organizationConfig), // TODO: Send emails
-  magicLink(magicLinkConfig), // TODO: Send emails
+  organization(organizationConfig),
+  magicLink(magicLinkConfig),
   openAPI(),
   multiSession(),
 ];
@@ -87,12 +87,12 @@ export const auth = betterAuth({
   ],
   emailAndPassword: {
     enabled: enabledProviders.includes('password'),
-    ...(enabledProviders.includes('password') // TODO: Send emails
+    ...(enabledProviders.includes('password')
       ? { ...providers.emailAndPassword }
       : {}),
   },
   emailVerification: {
-    ...(enabledProviders.includes('password') // TODO: Send emails
+    ...(enabledProviders.includes('password')
       ? { ...providers.emailVerification }
       : {}),
   },

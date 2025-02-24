@@ -1,6 +1,7 @@
 import { BetterAuthOptions, User } from 'better-auth';
 
 import { env } from '@/env';
+import { sendEmail } from '@/lib/email/service';
 import { getBaseUrl } from '@/lib/utils';
 
 const baseURL = getBaseUrl().toString();
@@ -20,19 +21,18 @@ export const providers: BetterAuthOptions = {
     minPasswordLength: 8,
     async sendResetPassword({ user, url }: { user: User; url: string }) {
       console.log('Sending reset password email to', user.email, url);
-      // TODO: Implement email sending
-      // try {
-      //   await sendEmail({
-      //     to: user.email,
-      //     template: "RESET_PASSWORD",
-      //     data: { url },
-      //     subject: "Reset your password",
-      //   });
-      //   return;
-      // } catch (error) {
-      //   console.error("Failed to send reset password email", error);
-      //   return;
-      // }
+      try {
+        await sendEmail({
+          to: user.email,
+          template: 'RESET_PASSWORD',
+          data: { url },
+          subject: 'Reset your password',
+        });
+        return;
+      } catch (error) {
+        console.error('Failed to send reset password email', error);
+        return;
+      }
       return;
     },
   },
@@ -41,13 +41,12 @@ export const providers: BetterAuthOptions = {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
       console.log('Sending verification email to', user.email, url);
-      // TODO: Implement email sending
-      // await sendEmail({
-      //   to: user.email,
-      //   template: 'VERIFICATION',
-      //   data: { url },
-      //   subject: 'Verify your email',
-      // });
+      await sendEmail({
+        to: user.email,
+        template: 'VERIFICATION',
+        data: { url },
+        subject: 'Verify your email',
+      });
     },
   },
   socialProviders: {
