@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger';
 
 import { SkipNav } from './_components/root-layout/skip-nav';
 import { ThemeToggle } from './_components/root-layout/theme-toggle';
+import { QueryProvider } from './_providers/query-client-provider';
 import { ThemeProvider } from './_providers/theme-provider';
 
 const geistSans = Geist({
@@ -26,8 +27,7 @@ const geistMono = Geist_Mono({
 
 // Configure logger based on environment
 logger.configure({
-  // verbose: process.env.NODE_ENV === 'development',
-  verbose: true,
+  verbose: process.env.NODE_ENV === 'development',
   minimalMetadataKeys: ['component', 'context', 'id'],
 });
 
@@ -48,21 +48,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-dvh scroll-smooth font-sans antialiased`}
       >
-        <NuqsAdapter>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <SkipNav />
-            <div id="main-root">{children}</div>
-            <div className="fixed bottom-4 right-4">
-              <ThemeToggle />
-            </div>
-            <Toaster richColors />
-          </ThemeProvider>
-        </NuqsAdapter>
+        <QueryProvider>
+          <NuqsAdapter>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <SkipNav />
+              <div id="main-root">{children}</div>
+              <div className="fixed bottom-4 right-4">
+                <ThemeToggle />
+              </div>
+              <Toaster richColors />
+            </ThemeProvider>
+          </NuqsAdapter>
+        </QueryProvider>
         <ErrorHandler />
       </body>
     </html>
