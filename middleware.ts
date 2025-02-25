@@ -3,7 +3,7 @@ import { betterFetch } from '@better-fetch/fetch';
 import type { Session } from 'better-auth';
 
 import { auditLogger } from './lib/audit';
-import { corecedSessionSelectSchema } from './lib/db/schemas';
+import { corecedSessionSelectSchema } from './lib/db/_schema';
 import { handleUnknownError } from './lib/errors';
 import { logger } from './lib/logger';
 
