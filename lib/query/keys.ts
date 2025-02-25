@@ -94,15 +94,18 @@ export const queryKeys = {
      * @param {string} id - Organization ID
      * @returns {QueryKey} ['organizations', id]
      */
-    detail: (id: string) => ['organizations', id] as const,
-    /** Get organization members
-     * @param {string} id - Organization ID
-     * @returns {QueryKey} ['organizations', id, 'members']
-     */
-    members: (id: string) => ['organizations', id, 'members'] as const,
-    invitations: {
-      detail: (id: string) => ['invitations', id] as const,
+    detail: (slug: string) => ['organizations', slug] as const,
+    metrics: (slug: string) => ['organizations', slug, 'metrics'] as const,
+    members: {
+      all: (slug: string) => ['organizations', slug, 'members'] as const,
+      detail: (slug: string, memberId: string) =>
+        ['organizations', slug, 'members', memberId] as const,
     },
+    invitations: {
+      all: (slug: string) => ['organizations', slug, 'invitations'] as const,
+      detail: (id: string) => ['organizations', 'invitations', id] as const,
+    },
+    settings: (slug: string) => ['organizations', slug, 'settings'] as const,
   },
   /** Workspace-related query keys */
   workspaces: {
