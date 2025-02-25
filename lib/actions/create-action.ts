@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { handleUnknownError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
-import { ApiErrorCode, ApiResponse } from '@/lib/types/auth/requests';
 import { type Response } from '@/lib/types/responses/base';
 import { type ErrorCode } from '@/lib/types/responses/error';
 

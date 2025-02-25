@@ -10,9 +10,8 @@ import {
   useOrganization,
   useUserOrganizations,
 } from '@/hooks/organizations/use-organization';
-import type { ApiErrorCode, ApiResponse } from '@/lib/types/auth/requests';
-import { type Response } from '@/lib/types/responses/base';
-import { type ErrorCode } from '@/lib/types/responses/error';
+import type { Response } from '@/lib/types/responses/base';
+import type { ErrorCode } from '@/lib/types/responses/error';
 
 import { renderWithProviders } from '../../utils/test-utils';
 

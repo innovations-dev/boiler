@@ -6,7 +6,6 @@ import {
   getUserOrganizationsAction,
 } from '@/app/_actions/organizations';
 import { createAction } from '@/lib/actions/create-action';
-import type { ApiErrorCode, ApiResponse } from '@/lib/types/auth/requests';
 import { type Response } from '@/lib/types/responses/base';
 import { type ErrorCode } from '@/lib/types/responses/error';
 

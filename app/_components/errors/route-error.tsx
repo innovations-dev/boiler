@@ -3,10 +3,13 @@
 import { useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 
+import { ErrorDisplay } from '@/app/_components/errors/error-display';
+import { UnauthorizedError } from '@/app/_components/errors/unauthorized-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { handleUnknownError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { type ErrorResponse } from '@/lib/types/responses/error';
 
 /**
  * @fileoverview React component for handling and displaying route errors in Next.js applications.
@@ -131,7 +134,7 @@ import { logger } from '@/lib/logger';
  * 2. Custom Card Error:
  * ```typescript
  * const props: RouteErrorProps = {
- *   error: new ApiError("UNAUTHORIZED", "Session expired"),
+ *   error: new ErrorResponse("UNAUTHORIZED", "Session expired"),
  *   reset: () => signIn(),
  *   title: "Authentication Required",
  *   description: "Please sign in to continue.",
@@ -151,7 +154,7 @@ import { logger } from '@/lib/logger';
  * ```
  *
  * @interface RouteErrorProps
- * @property {Error} error - The error object to display and log
+ * @property {Error | ErrorResponse} error - The error object to display and log
  * @property {() => void} reset - Callback function to reset/retry the action
  * @property {string} [title] - Custom title for the error message
  * @property {string} [description] - Custom description for the error message
@@ -159,7 +162,7 @@ import { logger } from '@/lib/logger';
  */
 interface RouteErrorProps {
   /** The error object to display and log */
-  error: Error;
+  error: Error | ErrorResponse;
   /** Callback function to reset/retry the action that caused the error */
   resetAction: () => void;
   /** Custom title for the error message (defaults to "Something went wrong!") */
@@ -214,7 +217,7 @@ interface RouteErrorProps {
  *   const router = useRouter();
  *
  *   const handleReset = () => {
- *     if (error instanceof ApiError && error.code === "UNAUTHORIZED") {
+ *     if (error instanceof Error && error.code === "UNAUTHORIZED") {
  *       router.push("/login");
  *     } else {
  *       reset();
@@ -281,16 +284,21 @@ export function RouteError({
     );
   }, [error, variant]);
 
-  // TODO: Handle ApiError - Add error handling / logger
-  // if (error instanceof ApiError) {
-  //   return (
-  //     <div className="flex h-full w-full flex-col items-center justify-center">
-  //       <h2 className="text-2xl font-bold">{title}</h2>
-  //       <p className="text-muted-foreground">{error.message}</p>
-  //       <Button onClick={resetAction}>Try again</Button>
-  //     </div>
-  //   );
-  // }
+  if (error instanceof Error) {
+    const appError = handleUnknownError(error);
+    // Convert to our standard error response
+    const errorResponse: ErrorResponse = {
+      message: appError.message,
+      code: appError.code,
+      status: appError.status,
+    };
+
+    if (errorResponse.code === 'UNAUTHORIZED') {
+      return <UnauthorizedError />;
+    }
+
+    return <ErrorDisplay error={errorResponse} />;
+  }
 
   if (variant === 'full') {
     return (

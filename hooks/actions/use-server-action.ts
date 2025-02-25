@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { auditLogger } from '@/lib/audit';
 import { handleUnknownError, ValidationError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
-import { ApiResponse } from '@/lib/types/auth/requests';
 import { type Response } from '@/lib/types/responses/base';
 import { type ErrorResponse } from '@/lib/types/responses/error';
 
@@ -48,7 +47,7 @@ function isBetterAuthError(response: unknown): response is BetterAuthError {
   );
 }
 
-function isApiResponse<T>(response: unknown): response is ApiResponse<T> {
+function isApiResponse<T>(response: unknown): response is Response<T> {
   return (
     typeof response === 'object' && response !== null && 'success' in response
   );
@@ -91,7 +90,7 @@ function handleError(
 }
 
 function handleSuccess<T>(
-  response: ApiResponse<T>,
+  response: Response<T>,
   successMessage?: string,
   onSuccess?: (data: T) => void | Promise<void>,
   resetForm?: () => void

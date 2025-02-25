@@ -17,7 +17,7 @@
 
 import { z } from 'zod';
 
-import { ERROR_CODES, type ErrorCode } from '@/lib/types/responses/error';
+import { type ErrorCode } from '@/lib/types/responses/error';
 
 import { logger } from '../logger';
 
