@@ -8,6 +8,7 @@ import { Toaster } from 'sonner';
 
 import { generateMetadata as meta } from '@/config/meta.config';
 import { ErrorHandler } from '@/lib/auth/error/error-handler';
+import { logger } from '@/lib/logger';
 
 import { SkipNav } from './_components/root-layout/skip-nav';
 import { ThemeToggle } from './_components/root-layout/theme-toggle';
@@ -21,6 +22,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+});
+
+// Configure logger based on environment
+logger.configure({
+  // verbose: process.env.NODE_ENV === 'development',
+  verbose: true,
+  minimalMetadataKeys: ['component', 'context', 'id'],
 });
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -15,6 +15,8 @@
  * @see {@link lib/logger} for error logging implementation
  */
 
+import { z } from 'zod';
+
 import { logger } from '../logger';
 import { API_ERROR_CODES } from '../types/auth/requests';
 
@@ -219,3 +221,31 @@ export const ERROR_MESSAGES = {
   DATABASE: 'A database error occurred',
   UNKNOWN: 'An unexpected error occurred',
 } as const;
+
+/**
+ * Specialized error class for validation errors.
+ * Used when input validation fails, typically with Zod schemas.
+ *
+ * @class ValidationError
+ * @extends AppError
+ *
+ * @example
+ * ```typescript
+ * throw new ValidationError('Invalid form data', {
+ *   zodError: validationError,
+ *   formData: data
+ * });
+ * ```
+ */
+export class ValidationError extends AppError {
+  constructor(
+    message: string,
+    context?: { zodError?: z.ZodError; [key: string]: unknown }
+  ) {
+    super(message, {
+      code: 'BAD_REQUEST',
+      status: 400,
+      context,
+    });
+  }
+}

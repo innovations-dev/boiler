@@ -1,10 +1,17 @@
 /**
- * @fileoverview Core API error handling utilities for standardized error responses.
- * This module provides the central error handling logic for API routes, ensuring
- * consistent error formatting, logging, and response structure across the application.
+ * @fileoverview API Route Error Handler
+ * Provides centralized error handling for API routes with structured error responses
+ * and logging. This handler ensures consistent error formatting and proper error
+ * tracking across all API endpoints.
+ *
+ * Features:
+ * - Structured error responses
+ * - Error logging with metadata
+ * - HTTP status code mapping
+ * - Development-specific error details
  *
  * @module lib/api/error-handler
- * @see {@link app/api/_lib/error-handlers} for API route-specific error handlers
+ * @see {@link lib/errors} for error types and handling utilities
  */
 
 import { NextResponse } from 'next/server';
@@ -13,42 +20,33 @@ import { handleUnknownError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
 /**
- * Standard structure for API error responses.
- * Ensures consistent error response format across all API endpoints.
- *
+ * Standard error response structure for API routes
  * @interface APIErrorResponse
- * @property {string} error - Human-readable error message
- * @property {string} code - Machine-readable error code for client handling
- * @property {number} status - HTTP status code
- *
- * @example
- * ```typescript
- * const errorResponse: APIErrorResponse = {
- *   error: "Resource not found",
- *   code: "NOT_FOUND",
- *   status: 404
- * };
- * ```
  */
-export interface APIErrorResponse {
-  error: string;
-  code: string;
-  status: number;
+interface APIErrorResponse {
+  error: {
+    message: string;
+    code: string;
+    status: number;
+    stack?: string;
+  };
 }
 
 /**
- * Processes and handles API errors with consistent logging and response formatting.
- * Converts various error types into a standardized API error response.
+ * Handles API route errors and returns a formatted error response
+ * Ensures consistent error handling across all API routes
  *
- * @param {unknown} error - The error to handle (can be any type)
- * @param {string} path - The API route path where the error occurred
- * @param {string} method - The HTTP method that was being processed
- * @returns {NextResponse<APIErrorResponse>} Formatted error response with appropriate status
+ * @function handleAPIError
+ * @param {unknown} error - The error to handle
+ * @param {string} path - API route path where the error occurred
+ * @param {string} method - HTTP method that triggered the error
+ * @returns {NextResponse<APIErrorResponse>} Formatted error response
  *
  * @example
  * ```typescript
+ * // In an API route
  * try {
- *   // API logic here
+ *   // API logic
  * } catch (error) {
  *   return handleAPIError(error, '/api/users', 'GET');
  * }
@@ -61,6 +59,7 @@ export function handleAPIError(
 ): NextResponse<APIErrorResponse> {
   const appError = handleUnknownError(error);
 
+  // Log the error with context
   logger.error(
     'API route error',
     {
@@ -73,11 +72,17 @@ export function handleAPIError(
     appError
   );
 
+  // Return structured error response
   return NextResponse.json(
     {
-      error: appError.message,
-      code: appError.code,
-      status: appError.status,
+      error: {
+        message: appError.message,
+        code: appError.code,
+        status: appError.status,
+        ...(process.env.NODE_ENV === 'development' && {
+          stack: appError.stack,
+        }),
+      },
     },
     { status: appError.status }
   );
