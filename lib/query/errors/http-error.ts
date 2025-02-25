@@ -8,7 +8,7 @@
  * @see {@link lib/schemas/api-types} for API error codes
  */
 
-import { API_ERROR_CODES } from '@/lib/auth/error/api-types';
+import { ERROR_CODES } from '@/lib/types/responses/error';
 
 /**
  * Base HTTP Error class for handling API errors with status codes
@@ -21,14 +21,14 @@ import { API_ERROR_CODES } from '@/lib/auth/error/api-types';
  *
  * @example
  * ```typescript
- * throw new HttpError(500, "Database connection failed", API_ERROR_CODES.DATABASE_ERROR);
+ * throw new HttpError(500, "Database connection failed", ERROR_CODES.DATABASE_ERROR);
  * ```
  */
 export class HttpError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public code: string = API_ERROR_CODES.INTERNAL_SERVER_ERROR
+    public code: string = ERROR_CODES.INTERNAL_SERVER_ERROR
   ) {
     super(message);
     this.name = 'HttpError';
@@ -49,7 +49,7 @@ export class HttpError extends Error {
  */
 export class UnauthorizedError extends HttpError {
   constructor(message: string) {
-    super(401, message, API_ERROR_CODES.UNAUTHORIZED);
+    super(401, message, ERROR_CODES.UNAUTHORIZED);
     this.name = 'UnauthorizedError';
   }
 }
@@ -68,7 +68,7 @@ export class UnauthorizedError extends HttpError {
  */
 export class ForbiddenError extends HttpError {
   constructor(message: string) {
-    super(403, message, API_ERROR_CODES.FORBIDDEN);
+    super(403, message, ERROR_CODES.FORBIDDEN);
     this.name = 'ForbiddenError';
   }
 }
@@ -87,7 +87,7 @@ export class ForbiddenError extends HttpError {
  */
 export class NotFoundError extends HttpError {
   constructor(message: string) {
-    super(404, message, API_ERROR_CODES.NOT_FOUND);
+    super(404, message, ERROR_CODES.NOT_FOUND);
     this.name = 'NotFoundError';
   }
 }
@@ -106,7 +106,7 @@ export class NotFoundError extends HttpError {
  */
 export class BadRequestError extends HttpError {
   constructor(message: string) {
-    super(400, message, API_ERROR_CODES.BAD_REQUEST);
+    super(400, message, ERROR_CODES.BAD_REQUEST);
     this.name = 'BadRequestError';
   }
 }
@@ -125,7 +125,7 @@ export class BadRequestError extends HttpError {
  */
 export class RateLimitError extends HttpError {
   constructor(message: string = 'Too many requests. Please try again later.') {
-    super(429, message, API_ERROR_CODES.TOO_MANY_REQUESTS);
+    super(429, message, ERROR_CODES.TOO_MANY_REQUESTS);
     this.name = 'RateLimitError';
   }
 }

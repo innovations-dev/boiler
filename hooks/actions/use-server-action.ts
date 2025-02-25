@@ -1,7 +1,7 @@
 // hooks/action/use-server-action.ts
 'use client';
 
-import { useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -9,40 +9,32 @@ import { auditLogger } from '@/lib/audit';
 import { handleUnknownError, ValidationError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { ApiResponse } from '@/lib/types/auth/requests';
+import { type Response } from '@/lib/types/responses/base';
+import { type ErrorResponse } from '@/lib/types/responses/error';
 
 // Better-Auth specific response types
-type BetterAuthErrorCode =
-  | 'UNAUTHORIZED'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'VALIDATION_ERROR'
-  | 'RATE_LIMIT'
-  | 'INTERNAL_ERROR'
-  | 'UNKNOWN_ERROR'
-  | 'FETCH_ERROR';
-
 interface BetterAuthError {
   error: {
     message: string;
+    code: string;
     statusCode: number;
   };
 }
 
-type BetterAuthSuccess<T> = T;
+interface BetterAuthSuccess<T> {
+  data: T;
+}
+
 type BetterAuthResponse<T> = BetterAuthSuccess<T> | BetterAuthError;
 
-interface UseServerActionOptions<TData, TInput> {
+export type ServerActionOptions<TData> = {
   action: (
-    input: TInput
-  ) => Promise<ApiResponse<TData> | BetterAuthResponse<TData>>;
-  onSuccess?: (data: TData) => void | Promise<void>;
-  onError?: (error: Error) => void | Promise<void>;
-  schema?: z.ZodSchema<TInput>;
+    ...args: any[]
+  ) => Promise<Response<TData> | BetterAuthResponse<TData>>;
+  onSuccess?: (data: TData) => void;
+  onError?: (error: ErrorResponse | Error) => void | Promise<void>;
   context?: string;
-  successMessage?: string;
-  errorMessage?: string;
-  resetForm?: () => void;
-}
+};
 
 function isBetterAuthError(response: unknown): response is BetterAuthError {
   if (!response || typeof response !== 'object') return false;
@@ -62,11 +54,21 @@ function isApiResponse<T>(response: unknown): response is ApiResponse<T> {
   );
 }
 
+function isResponse<T>(response: unknown): response is Response<T> {
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    'data' in response &&
+    (!('error' in response) ||
+      (typeof response.error === 'object' && response.error !== null))
+  );
+}
+
 function handleError(
   error: unknown,
   context: string,
   errorMessage: string,
-  onError?: (error: Error) => void | Promise<void>
+  onError?: (error: ErrorResponse | Error) => void | Promise<void>
 ) {
   const appError = handleUnknownError(error);
 
@@ -105,28 +107,41 @@ function handleSuccess<T>(
   }
 }
 
+function handleActionResponse<T>(
+  response: Response<T>,
+  options?: Pick<ServerActionOptions<T>, 'onSuccess' | 'onError'>
+): Response<T> {
+  if (response.success && options?.onSuccess) {
+    options.onSuccess(response.data);
+  } else if (!response.success && options?.onError && response.error) {
+    options.onError(response.error);
+  }
+  return response;
+}
+
 function normalizeResponse<T>(
-  response: ApiResponse<T> | BetterAuthResponse<T>
-): ApiResponse<T> {
+  response: Response<T> | BetterAuthResponse<T>
+): Response<T> {
+  if (isResponse<T>(response)) {
+    return response;
+  }
+
   if (isBetterAuthError(response)) {
     return {
       success: false,
-      data: {} as T,
+      data: undefined as unknown as T,
       error: {
-        code: 'UNAUTHORIZED',
         message: response.error.message,
+        code: 'UNAUTHORIZED',
         status: response.error.statusCode,
       },
     };
   }
 
-  if (isApiResponse<T>(response)) {
-    return response;
-  }
-
+  // Must be BetterAuthSuccess
   return {
     success: true,
-    data: response as T,
+    data: (response as BetterAuthSuccess<T>).data,
   };
 }
 
@@ -199,7 +214,12 @@ export function useServerAction<TData, TInput>({
   successMessage,
   errorMessage = 'An error occurred',
   resetForm,
-}: UseServerActionOptions<TData, TInput>) {
+}: ServerActionOptions<TData> & {
+  schema?: z.ZodSchema<TInput>;
+  successMessage?: string;
+  errorMessage?: string;
+  resetForm?: () => void;
+}) {
   const [isPending, startTransition] = useTransition();
 
   const execute = async (input: TInput) => {
@@ -246,4 +266,22 @@ export function useServerAction<TData, TInput>({
   };
 
   return { execute: wrappedExecute, isPending };
+}
+
+export function useValidatedAction<TData, TInput>({
+  action,
+  schema,
+  onSuccess,
+  onError,
+  context = 'unknown',
+  successMessage,
+  errorMessage,
+  resetForm,
+}: ServerActionOptions<TData> & {
+  schema?: z.ZodSchema<TInput>;
+  successMessage?: string;
+  errorMessage?: string;
+  resetForm?: () => void;
+}) {
+  // ... rest of the function ...
 }

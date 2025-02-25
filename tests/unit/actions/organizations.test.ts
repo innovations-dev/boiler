@@ -7,6 +7,8 @@ import {
 } from '@/app/_actions/organizations';
 import { createAction } from '@/lib/actions/create-action';
 import type { ApiErrorCode, ApiResponse } from '@/lib/types/auth/requests';
+import { type Response } from '@/lib/types/responses/base';
+import { type ErrorCode } from '@/lib/types/responses/error';
 
 // Mock createAction utility
 vi.mock('@/lib/actions/create-action', () => ({
@@ -59,12 +61,12 @@ describe('Organization Actions', () => {
         name: '', // Invalid: empty name
         userId: nanoid(),
       };
-      const errorResponse: ApiResponse<unknown> = {
+      const errorResponse: Response<unknown> = {
         success: false,
-        data: null,
+        data: undefined,
         error: {
           message: 'Validation failed',
-          code: 'VALIDATION_ERROR' as ApiErrorCode,
+          code: 'VALIDATION_ERROR' as ErrorCode,
           status: 400,
         },
       };

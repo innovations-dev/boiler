@@ -17,16 +17,9 @@
 
 import { z } from 'zod';
 
-import { logger } from '../logger';
-import { API_ERROR_CODES } from '../types/auth/requests';
+import { ERROR_CODES, type ErrorCode } from '@/lib/types/responses/error';
 
-/**
- * Union type of all possible error codes in the application.
- * Combines API error codes with application-specific codes.
- *
- * @typedef {keyof typeof API_ERROR_CODES | 'UNKNOWN_ERROR'} ErrorCode
- */
-export type ErrorCode = keyof typeof API_ERROR_CODES | 'UNKNOWN_ERROR';
+import { logger } from '../logger';
 
 /**
  * Standard structure for error metadata across the application.

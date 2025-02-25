@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { handleUnknownError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { ApiErrorCode, ApiResponse } from '@/lib/types/auth/requests';
+import { type Response } from '@/lib/types/responses/base';
+import { type ErrorCode } from '@/lib/types/responses/error';
 
 /**
  * Creates a type-safe server action with input validation and error handling
@@ -43,7 +45,7 @@ export async function createAction<Input, Output>({
   handler: (validatedInput: Input) => Promise<Output>;
   input: Input;
   context?: string;
-}): Promise<ApiResponse<Output>> {
+}): Promise<Response<Output>> {
   try {
     const validatedInput = schema ? schema.parse(input) : input;
     const result = await handler(validatedInput);
@@ -64,7 +66,7 @@ export async function createAction<Input, Output>({
       success: false,
       data: null as Output,
       error: {
-        code: appError.code as ApiErrorCode,
+        code: appError.code as ErrorCode,
         message: appError.message,
         status: appError.status,
       },

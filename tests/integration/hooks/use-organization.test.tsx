@@ -11,6 +11,8 @@ import {
   useUserOrganizations,
 } from '@/hooks/organizations/use-organization';
 import type { ApiErrorCode, ApiResponse } from '@/lib/types/auth/requests';
+import { type Response } from '@/lib/types/responses/base';
+import { type ErrorCode } from '@/lib/types/responses/error';
 
 import { renderWithProviders } from '../../utils/test-utils';
 
@@ -70,7 +72,7 @@ describe('Organization Hooks', () => {
         logo: null,
         metadata: null,
       };
-      const errorResponse: ApiResponse<
+      const errorResponse: Response<
         | {
             id: string;
             name: string;
@@ -86,7 +88,7 @@ describe('Organization Hooks', () => {
         data: undefined,
         error: {
           message: 'Organization not found',
-          code: 'NOT_FOUND' as ApiErrorCode,
+          code: 'NOT_FOUND' as ErrorCode,
           status: 404,
         },
       };
