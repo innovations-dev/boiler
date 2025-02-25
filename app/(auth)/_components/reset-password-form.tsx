@@ -26,6 +26,8 @@ import {
   type BetterAuthResponse,
 } from '@/hooks/actions/use-server-action';
 import { authClient } from '@/lib/auth/client';
+import { AppError } from '@/lib/errors';
+import { ERROR_CODES } from '@/lib/types/responses/error';
 
 const resetPasswordSchema = z
   .object({
@@ -56,7 +58,10 @@ export function ResetPasswordForm() {
     action: async (data) => {
       const token = new URLSearchParams(window.location.search).get('token');
       if (!token) {
-        throw new Error('Reset token is missing');
+        throw new AppError('Reset token is missing', {
+          code: ERROR_CODES.BAD_REQUEST,
+          status: 400,
+        });
       }
 
       return authClient.resetPassword({

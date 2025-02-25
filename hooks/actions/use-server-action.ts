@@ -24,7 +24,7 @@ interface BetterAuthSuccess<T> {
   data: T;
 }
 
-type BetterAuthResponse<T> = BetterAuthSuccess<T> | BetterAuthError;
+export type BetterAuthResponse<T> = BetterAuthSuccess<T> | BetterAuthError;
 
 export type ServerActionOptions<TData> = {
   action: (

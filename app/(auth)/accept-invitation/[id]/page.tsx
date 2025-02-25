@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckIcon, Loader2, XIcon } from "lucide-react";
+import { useParams, useRouter } from 'next/navigation';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { CheckIcon, Loader2, XIcon } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -13,18 +12,21 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { authClient } from "@/lib/auth/auth-client";
-import { queryKeys } from "@/lib/query/keys";
-import { InvitationError } from "./invitation-error";
-import { InvitationSkeleton } from "./invitation-skeleton";
+} from '@/components/ui/card';
+import { authClient } from '@/lib/auth/client';
+import { AppError } from '@/lib/errors';
+import { queryKeys } from '@/lib/query/keys';
+import { ERROR_CODES } from '@/lib/types/responses/error';
+
+import { InvitationError } from './invitation-error';
+import { InvitationSkeleton } from './invitation-skeleton';
 
 interface Invitation {
   organizationName: string;
   organizationSlug: string;
   inviterEmail: string;
   id: string;
-  status: "pending" | "accepted" | "rejected" | "canceled";
+  status: 'pending' | 'accepted' | 'rejected' | 'canceled';
   email: string;
   expiresAt: Date;
   organizationId: string;
@@ -40,15 +42,16 @@ export default function InvitationPage() {
 
   const { data: invitation, isLoading: isLoadingInvitation } =
     useQuery<Invitation>({
-      queryKey: queryKeys.organizations.invitations.detail("", params.id),
+      queryKey: queryKeys.organizations.invitations.detail(params.id),
       queryFn: async () => {
         const response = await authClient.organization.getInvitation({
           query: { id: params.id },
         });
         if (!response.data) {
-          throw new Error(
-            response.error?.message || "Failed to fetch invitation"
-          );
+          throw new AppError('Failed to fetch invitation', {
+            code: ERROR_CODES.BAD_REQUEST,
+            status: 400,
+          });
         }
         return response.data as Invitation;
       },
@@ -60,23 +63,24 @@ export default function InvitationPage() {
         invitationId: params.id,
       });
       if (!response.data) {
-        throw new Error(
-          response.error?.message || "Failed to accept invitation"
-        );
+        throw new AppError('Failed to accept invitation', {
+          code: ERROR_CODES.BAD_REQUEST,
+          status: 400,
+        });
       }
       return response.data;
     },
     onSuccess: () => {
-      router.push("/dashboard");
+      router.push('/dashboard');
       // Log the event
       console.log({
-        type: "organization_invitation_accepted",
-        action: "Joined organization",
+        type: 'organization_invitation_accepted',
+        action: 'Joined organization',
         details: `Accepted invitation to join ${invitation?.organizationName}`,
-        entityType: "member",
-        entityId: invitation?.id || "",
-        organizationId: invitation?.organizationId || "",
-        userId: session?.user.id || "",
+        entityType: 'member',
+        entityId: invitation?.id || '',
+        organizationId: invitation?.organizationId || '',
+        userId: session?.user.id || '',
       });
     },
   });
@@ -87,9 +91,10 @@ export default function InvitationPage() {
         invitationId: params.id,
       });
       if (!response.data) {
-        throw new Error(
-          response.error?.message || "Failed to reject invitation"
-        );
+        throw new AppError('Failed to reject invitation', {
+          code: ERROR_CODES.BAD_REQUEST,
+          status: 400,
+        });
       }
       return response.data;
     },
@@ -104,9 +109,9 @@ export default function InvitationPage() {
   }
 
   const isExpired = new Date(invitation.expiresAt) < new Date();
-  const isPending = invitation.status === "pending";
-  const isAccepted = invitation.status === "accepted";
-  const isRejected = invitation.status === "rejected";
+  const isPending = invitation.status === 'pending';
+  const isAccepted = invitation.status === 'accepted';
+  const isRejected = invitation.status === 'rejected';
 
   if (isExpired) {
     return (
@@ -169,7 +174,7 @@ export default function InvitationPage() {
                 Invitation Declined
               </h2>
               <p className="text-center">
-                You&apos;ve declined the invitation to join{" "}
+                You&apos;ve declined the invitation to join{' '}
                 {invitation.organizationName}.
               </p>
             </div>
@@ -188,7 +193,7 @@ export default function InvitationPage() {
                   Declining...
                 </>
               ) : (
-                "Decline"
+                'Decline'
               )}
             </Button>
             <Button
@@ -201,7 +206,7 @@ export default function InvitationPage() {
                   Accepting...
                 </>
               ) : (
-                "Accept Invitation"
+                'Accept Invitation'
               )}
             </Button>
           </CardFooter>

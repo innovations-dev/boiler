@@ -10,6 +10,8 @@ import InvitationEmail from '@/emails/invitation';
 import MagicLinkEmail from '@/emails/magic-link';
 import ResetPasswordEmail from '@/emails/reset-password';
 import VerificationEmail from '@/emails/verification-email';
+import { EmailError } from '@/lib/errors';
+import { ERROR_CODES } from '@/lib/types/responses/error';
 
 import { logger } from '../logger';
 import type { EmailOptions, EmailResult } from '../types/email';
@@ -98,7 +100,10 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   try {
     const template = templateComponents[options.template];
     if (!template) {
-      throw new Error(`Invalid email template: ${options.template}`);
+      throw new EmailError(
+        `Invalid email template: ${options.template}`,
+        ERROR_CODES.TEMPLATE_ERROR
+      );
     }
 
     const templateConfig = emailConfig.templates[options.template];

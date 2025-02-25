@@ -10,8 +10,10 @@ import {
   getUserOrganizationsAction,
 } from '@/app/_actions/organizations';
 import { createOrganizationSchema, organizationSchema } from '@/lib/db/_schema';
+import { AppError } from '@/lib/errors';
 import { useValidatedMutation } from '@/lib/query/hooks/useValidatedMutation';
 import { useValidatedQuery } from '@/lib/query/hooks/useValidatedQuery';
+import { ERROR_CODES } from '@/lib/types/responses/error';
 
 import { useServerAction } from '../actions/use-server-action';
 
@@ -21,7 +23,12 @@ export function useOrganization(id: string) {
     ['organizations', id],
     async () => {
       const response = await getOrganizationAction(id);
-      if (!response.data) throw new Error('Organization not found');
+      if (!response.data) {
+        throw new AppError('Organization not found', {
+          code: ERROR_CODES.NOT_FOUND,
+          status: 404,
+        });
+      }
       return response.data;
     },
     organizationSchema,

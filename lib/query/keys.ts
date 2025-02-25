@@ -100,6 +100,9 @@ export const queryKeys = {
      * @returns {QueryKey} ['organizations', id, 'members']
      */
     members: (id: string) => ['organizations', id, 'members'] as const,
+    invitations: {
+      detail: (id: string) => ['invitations', id] as const,
+    },
   },
   /** Workspace-related query keys */
   workspaces: {

@@ -27,6 +27,7 @@
  * @see {@link https://www.sitemaps.org/protocol.html Sitemap Protocol}
  */
 
+import { ConfigError } from '@/lib/errors';
 import { BASE_URL } from '@/lib/utils';
 
 /**
@@ -84,13 +85,15 @@ export interface SitemapConfig {
 export const sitemapConfig: SitemapConfig = {
   baseUrl: (() => {
     const url = BASE_URL.toString();
-    if (!url) throw new Error('BASE_URL must be defined');
+    if (!url) throw new ConfigError('BASE_URL must be defined');
     return url;
   })(),
   urlsPerSitemap: (() => {
     const limit = 45000;
     if (limit > 50000) {
-      throw new Error("urlsPerSitemap cannot exceed 50,000 (Google's limit)");
+      throw new ConfigError(
+        "urlsPerSitemap cannot exceed 50,000 (Google's limit)"
+      );
     }
     return limit;
   })(),
@@ -98,7 +101,7 @@ export const sitemapConfig: SitemapConfig = {
   defaultPriority: (() => {
     const priority = 0.7;
     if (priority < 0 || priority > 1) {
-      throw new Error('defaultPriority must be between 0.0 and 1.0');
+      throw new ConfigError('defaultPriority must be between 0.0 and 1.0');
     }
     return priority;
   })(),

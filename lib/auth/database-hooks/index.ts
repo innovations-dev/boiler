@@ -5,7 +5,9 @@ import { nanoid } from 'nanoid';
 
 import { db } from '@/lib/db';
 import { member, organization } from '@/lib/db/schema';
+import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { ERROR_CODES } from '@/lib/types/responses/error';
 import { getBaseUrl } from '@/lib/utils';
 
 function createPersonalOrganization(userId: string) {
@@ -70,7 +72,10 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
           });
 
           if (!response.ok) {
-            throw new Error('Failed to set active organization');
+            throw new AppError('Failed to set active organization', {
+              code: ERROR_CODES.BAD_REQUEST,
+              status: 400,
+            });
           }
           return;
         } catch (error) {

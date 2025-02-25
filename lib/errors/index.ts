@@ -15,11 +15,21 @@
  * @see {@link lib/logger} for error logging implementation
  */
 
-import { z } from 'zod';
+import { BetterAuthError } from 'better-auth';
+import { z, ZodError } from 'zod';
 
-import { type ErrorCode } from '@/lib/types/responses/error';
+import { logger } from '@/lib/logger';
+import {
+  ERROR_CODES,
+  type ErrorCode,
+  type ErrorResponse,
+} from '@/lib/types/responses/error';
 
-import { logger } from '../logger';
+// Extend BetterAuthError type with required properties
+interface EnhancedBetterAuthError extends BetterAuthError {
+  code: ErrorCode;
+  status: number;
+}
 
 /**
  * Standard structure for error metadata across the application.
@@ -140,54 +150,78 @@ export class AuthenticationError extends AppError {
  * Specialized error class for database-related errors.
  * Used for database connection, query, and transaction errors.
  *
- * @class DatabaseError
+ * @class AppDatabaseError
  * @extends AppError
  *
  * @example
  * ```typescript
- * throw new DatabaseError('Failed to connect to database', error);
+ * throw new AppDatabaseError('Failed to connect to database', error);
  * ```
  */
-export class DatabaseError extends AppError {
+export class AppDatabaseError extends AppError {
   constructor(message: string, cause?: unknown) {
     super(message, {
-      code: 'DATABASE_ERROR',
+      code: ERROR_CODES.INTERNAL_SERVER_ERROR,
       status: 500,
       cause,
     });
   }
 }
 
-/**
- * Utility function to handle unknown errors by converting them to AppError instances.
- * Ensures consistent error handling even for unexpected error types.
- *
- * @function handleUnknownError
- * @param {unknown} error - Any error value to be handled
- * @returns {AppError} A properly formatted AppError instance
- *
- * @example
- * ```typescript
- * try {
- *   await riskyOperation();
- * } catch (error) {
- *   const appError = handleUnknownError(error);
- *   // Now we have a consistent error structure
- * }
- * ```
- */
-export function handleUnknownError(error: unknown): AppError {
-  if (error instanceof AppError) {
-    return error;
+type ErrorWithCode = Error & { code?: string };
+
+const errorHandlers = {
+  [BetterAuthError.name]: (error: EnhancedBetterAuthError): ErrorResponse => ({
+    message: error.message,
+    code: error.code,
+    status: error.status ?? 400,
+  }),
+
+  [ZodError.name]: (error: ZodError): ErrorResponse => ({
+    message: 'Validation failed',
+    code: ERROR_CODES.VALIDATION_ERROR,
+    status: 400,
+  }),
+
+  [AppDatabaseError.name]: (error: AppDatabaseError): ErrorResponse => ({
+    message: 'Database error occurred',
+    code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+    status: 500,
+  }),
+
+  [Error.name]: (error: ErrorWithCode): ErrorResponse => ({
+    message: error.message,
+    code:
+      (error.code as keyof typeof ERROR_CODES) ??
+      ERROR_CODES.INTERNAL_SERVER_ERROR,
+    status: 500,
+  }),
+} as const;
+
+export function handleUnknownError(
+  error: unknown,
+  path?: string
+): ErrorResponse {
+  logger.error(
+    'Error occurred',
+    {
+      path,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    },
+    error
+  );
+
+  if (error instanceof Error) {
+    const handler =
+      errorHandlers[error.constructor.name] ?? errorHandlers[Error.name];
+    return handler(error as never);
   }
 
-  const message =
-    error instanceof Error ? error.message : 'An unknown error occurred';
-  return new AppError(message, {
-    code: 'UNKNOWN_ERROR',
+  return {
+    message: 'An unknown error occurred',
+    code: ERROR_CODES.INTERNAL_SERVER_ERROR,
     status: 500,
-    cause: error,
-  });
+  };
 }
 
 /**
@@ -239,6 +273,36 @@ export class ValidationError extends AppError {
       code: 'BAD_REQUEST',
       status: 400,
       context,
+    });
+  }
+}
+
+export class FormError extends AppError {
+  constructor(message: string) {
+    super(message, {
+      code: ERROR_CODES.VALIDATION_ERROR,
+      status: 400,
+    });
+  }
+}
+
+export class ConfigError extends AppError {
+  constructor(message: string) {
+    super(message, {
+      code: ERROR_CODES.CONFIGURATION_ERROR,
+      status: 500,
+    });
+  }
+}
+
+export class EmailError extends AppError {
+  constructor(
+    message: string,
+    code: ErrorCode = ERROR_CODES.INTERNAL_SERVER_ERROR
+  ) {
+    super(message, {
+      code,
+      status: 500,
     });
   }
 }

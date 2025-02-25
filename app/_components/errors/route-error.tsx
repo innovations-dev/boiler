@@ -126,7 +126,10 @@ import { type ErrorResponse } from '@/lib/types/responses/error';
  * 1. Basic Alert:
  * ```typescript
  * const props: RouteErrorProps = {
- *   error: new Error("Failed to load data"),
+ *   error: new AppError("Failed to load data", {
+ *     code: ERROR_CODES.BAD_REQUEST,
+ *     status: 400,
+ *   }),
  *   reset: () => window.location.reload(),
  * };
  * ```
@@ -145,7 +148,10 @@ import { type ErrorResponse } from '@/lib/types/responses/error';
  * 3. Full-Screen Error:
  * ```typescript
  * const props: RouteErrorProps = {
- *   error: new Error("Database connection failed"),
+ *   error: new AppError("Database connection failed", {
+ *     code: ERROR_CODES.BAD_REQUEST,
+ *     status: 400,
+ *   }),
  *   reset: () => reconnectDatabase(),
  *   title: "System Unavailable",
  *   description: "We're experiencing technical difficulties.",
