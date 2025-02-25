@@ -8,14 +8,6 @@
  */
 
 /**
- * Type representing a query key tuple
- * @template T - The type of additional parameters
- */
-type QueryKey<T = void> = T extends void
-  ? readonly string[]
-  : readonly [...string[], T];
-
-/**
  * Query key factory for consistent key management across the application.
  * Each key is a function that returns a readonly tuple to ensure type safety and immutability.
  *
@@ -69,30 +61,23 @@ type QueryKey<T = void> = T extends void
 export const queryKeys = {
   /** User-related query keys */
   users: {
-    /** Get all users
-     * @returns {QueryKey} ['users']
-     */
+    /** Get all users */
     all: () => ['users'] as const,
     /** Get user by ID
      * @param {string} id - User ID
-     * @returns {QueryKey} ['users', id]
      */
     detail: (id: string) => ['users', id] as const,
     /** Get user preferences
      * @param {string} id - User ID
-     * @returns {QueryKey} ['users', id, 'preferences']
      */
     preferences: (id: string) => ['users', id, 'preferences'] as const,
   },
   /** Organization-related query keys */
   organizations: {
-    /** Get all organizations
-     * @returns {QueryKey} ['organizations']
-     */
+    /** Get all organizations */
     all: () => ['organizations'] as const,
     /** Get organization by ID
      * @param {string} id - Organization ID
-     * @returns {QueryKey} ['organizations', id]
      */
     detail: (slug: string) => ['organizations', slug] as const,
     metrics: (slug: string) => ['organizations', slug, 'metrics'] as const,
@@ -109,21 +94,16 @@ export const queryKeys = {
   },
   /** Workspace-related query keys */
   workspaces: {
-    /** Get all workspaces
-     * @returns {QueryKey} ['workspaces']
-     */
+    /** Get all workspaces */
     all: () => ['workspaces'] as const,
     /** Get workspace by ID
      * @param {string} id - Workspace ID
-     * @returns {QueryKey} ['workspaces', id]
      */
     detail: (id: string) => ['workspaces', id] as const,
   },
   /** Session-related query keys */
   session: {
-    /** Get current session
-     * @returns {QueryKey} ['session']
-     */
+    /** Get current session */
     current: () => ['session'] as const,
   },
 } as const;

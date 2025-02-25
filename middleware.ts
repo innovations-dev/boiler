@@ -1,121 +1,79 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { betterFetch } from '@better-fetch/fetch';
-import type { Session } from 'better-auth';
 
-import { auditLogger } from './lib/audit';
-import { corecedSessionSelectSchema } from './lib/db/_schema';
-import { handleUnknownError } from './lib/errors';
-import { logger } from './lib/logger';
+import { validateSession } from '@/lib/auth/session';
+import { AppError } from '@/lib/errors';
+import { ERROR_CODES } from '@/lib/types/responses/error';
 
 /**
- * Middleware for handling authentication, logging, and error handling
+ * Middleware for handling organization routes authentication and context
+ * Leverages Better-Auth for session validation while keeping organization logic separate
  */
-export default async function middleware(request: NextRequest) {
-  const requestId = crypto.randomUUID();
-  const startTime = Date.now();
+export async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
 
-  try {
-    // Log incoming request
-    logger.info('Incoming request', {
-      component: 'Middleware',
-      method: request.method,
-      path: request.nextUrl.pathname,
-      requestId,
-      userAgent: request.headers.get('user-agent'),
-      referer: request.headers.get('referer'),
-    });
+  // Only handle organization-specific routes
+  if (
+    pathname.startsWith('/api/organizations') ||
+    pathname.startsWith('/dashboard/organizations')
+  ) {
+    try {
+      // Use Better-Auth's session validation
+      const session = await validateSession(req);
 
-    // Attempt to get session
-    const { data: session } = await betterFetch<Session>(
-      '/api/auth/get-session',
-      {
-        baseURL: request.nextUrl.origin,
-        headers: {
-          cookie: request.headers.get('cookie') || '',
-        },
+      if (!session?.user) {
+        return NextResponse.json(
+          {
+            message: 'Authentication required',
+            code: ERROR_CODES.UNAUTHORIZED,
+            status: 401,
+          },
+          { status: 401 }
+        );
       }
-    );
 
-    const parsedSession = corecedSessionSelectSchema.safeParse(session);
+      // For organization routes, add our custom context
+      if (pathname.includes('/organizations/')) {
+        const organizationSlug = pathname
+          .split('/organizations/')[1]
+          ?.split('/')[0];
 
-    if (!parsedSession.success) {
-      logger.warn('Invalid session', {
-        component: 'Middleware',
-        requestId,
-        error: parsedSession.error,
-      });
+        if (organizationSlug) {
+          // Add organization context headers
+          const requestHeaders = new Headers(req.headers);
+          requestHeaders.set('x-organization-slug', organizationSlug);
+          // Add user context headers
+          requestHeaders.set('x-user-id', session.user.id);
+          // Add session tracking header for metrics
+          requestHeaders.set('x-session-id', session.sessionId || '');
 
-      // Create audit log for failed authentication
-      auditLogger.logAuth('user.login', {
-        status: 'failure',
-        requestId,
-        path: request.nextUrl.pathname,
-        errorType: 'INVALID_SESSION',
-      });
+          return NextResponse.next({
+            request: {
+              headers: requestHeaders,
+            },
+          });
+        }
+      }
 
-      return NextResponse.redirect(new URL('/sign-in', request.url));
+      return NextResponse.next();
+    } catch (error) {
+      if (error instanceof AppError) {
+        return NextResponse.json(
+          {
+            message: error.message,
+            code: error.code,
+            status: error.status,
+          },
+          { status: error.status }
+        );
+      }
+      throw error;
     }
-
-    // Log successful authentication
-    auditLogger.logAuth('user.login', {
-      status: 'success',
-      requestId,
-      userId: parsedSession.data.userId,
-      path: request.nextUrl.pathname,
-    });
-
-    const response = NextResponse.next();
-
-    // Add request ID to response headers for tracing
-    response.headers.set('X-Request-ID', requestId);
-
-    return response;
-  } catch (error) {
-    const appError = handleUnknownError(error);
-
-    // Log error
-    logger.error(
-      'Middleware error',
-      {
-        component: 'Middleware',
-        requestId,
-        path: request.nextUrl.pathname,
-        errorCode: appError.code,
-        errorStatus: appError.status,
-      },
-      appError
-    );
-
-    // Create audit log for error
-    auditLogger.logAuth(
-      'user.login',
-      {
-        status: 'failure',
-        requestId,
-        path: request.nextUrl.pathname,
-        errorType: appError.code,
-        errorMessage: appError.message,
-      },
-      appError
-    );
-
-    return NextResponse.redirect(new URL('/sign-in', request.url));
-  } finally {
-    // Log request completion
-    const duration = Date.now() - startTime;
-    logger.info('Request completed', {
-      component: 'Middleware',
-      requestId,
-      duration,
-      path: request.nextUrl.pathname,
-    });
   }
+
+  return NextResponse.next();
 }
 
+// Only match organization routes - let Better-Auth handle its own routes
 export const config = {
-  matcher: [
-    // "/((?!api|_next/static|_next/image|favicon.ico).*)",
-    '/dashboard',
-    '/admin',
-  ],
+  matcher: ['/api/organizations/:path*', '/dashboard/organizations/:path*'],
 };
