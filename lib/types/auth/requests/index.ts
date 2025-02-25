@@ -1,5 +1,19 @@
-// Auth-specific schemas
 import { z } from 'zod';
+
+import { type Response } from '@/lib/types/responses/base';
+import { type ErrorResponse } from '@/lib/types/responses/error';
+
+// Re-export base response type as ApiResponse for backward compatibility
+export type { Response as ApiResponse } from '@/lib/types/responses/base';
+
+// Auth-specific schemas
+export const createOrganizationRequestSchema = z.object({
+  name: z.string().min(1),
+  userId: z.string(),
+});
+
+export const updateOrganizationRequestSchema =
+  createOrganizationRequestSchema.partial();
 
 /**
  * @fileoverview Auth-specific type definitions and re-exports of response types
@@ -14,25 +28,7 @@ export {
 } from '@/lib/types/responses/error';
 
 export {
-  type Response as ApiResponse,
-  createResponseSchema as createApiResponseSchema,
-} from '@/lib/types/responses/base';
-
-export {
   type PaginationMeta,
   type PaginationParams,
   createPaginatedResponseSchema,
 } from '@/lib/types/responses/pagination';
-
-/**
- * Schema for creating organization requests
- * @property {string} name - Organization name (2-100 characters)
- * @property {string} slug - Organization slug (2-100 characters)
- */
-export const createOrganizationRequestSchema = z.object({
-  name: z.string().min(2).max(100),
-  slug: z.string().min(2).max(100),
-});
-
-export const updateOrganizationRequestSchema =
-  createOrganizationRequestSchema.partial();
