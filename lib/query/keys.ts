@@ -80,7 +80,11 @@ export const queryKeys = {
      * @param {string} id - Organization ID
      */
     detail: (slug: string) => ['organizations', slug] as const,
-    metrics: (slug: string) => ['organizations', slug, 'metrics'] as const,
+    metrics: {
+      all: (slug: string) => ['organizations', slug, 'metrics'] as const,
+      activeSessions: (slug: string) =>
+        ['organizations', slug, 'metrics', 'active-sessions'] as const,
+    },
     members: {
       all: (slug: string) => ['organizations', slug, 'members'] as const,
       detail: (slug: string, memberId: string) =>

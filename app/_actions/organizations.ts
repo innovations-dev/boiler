@@ -3,12 +3,17 @@
 import { z } from 'zod';
 
 import { createAction } from '@/lib/actions/create-action';
-import { createMemberSchema, createOrganizationSchema } from '@/lib/db/_schema';
+import {
+  createMemberSchema,
+  createOrganizationSchema,
+  setActiveOrganizationInputSchema,
+} from '@/lib/db/_schema';
 import {
   addMemberToOrganization,
   createOrganization,
   getOrganization,
   getUserOrganizations,
+  setActiveOrganization,
   updateOrganization,
 } from '@/lib/db/queries/organizations';
 
@@ -74,5 +79,17 @@ export async function addMemberToOrganizationAction(input: {
     handler: () => addMemberToOrganization(input),
     input,
     context: 'addMemberToOrganization',
+  });
+}
+
+export async function setActiveOrganizationAction(input: {
+  sessionId: string;
+  organizationId: string;
+}) {
+  return createAction({
+    schema: setActiveOrganizationInputSchema,
+    handler: () => setActiveOrganization(input),
+    input,
+    context: 'setActiveOrganization',
   });
 }

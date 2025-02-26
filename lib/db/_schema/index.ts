@@ -46,3 +46,8 @@ export const sessionUpdateSchema = createUpdateSchema(session);
 export type CoercedSession = z.infer<typeof corecedSessionSelectSchema>;
 export type Session = z.infer<typeof sessionSelectSchema>;
 export type SessionInsert = typeof session.$inferInsert;
+
+export const setActiveOrganizationInputSchema = z.object({
+  sessionId: z.string(),
+  organizationId: z.string(),
+});

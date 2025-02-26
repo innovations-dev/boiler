@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 
 import { db } from '@/lib/db';
 import type { Member, Organization } from '@/lib/db/_schema';
-import { member, organization } from '@/lib/db/schema';
+import { member, organization, session } from '@/lib/db/schema';
 
 export async function getOrganization(
   id: string
@@ -102,4 +102,59 @@ export async function addMemberToOrganization(data: {
     .returning();
 
   return newMember;
+}
+
+export async function setActiveOrganization(data: {
+  sessionId: string;
+  organizationId: string;
+}): Promise<void> {
+  const { sessionId, organizationId } = data;
+
+  await db
+    .update(session)
+    .set({
+      activeOrganizationId: organizationId,
+      updatedAt: new Date(),
+    })
+    .where(eq(session.id, sessionId));
+}
+
+export async function createPersonalOrganization(userId: string) {
+  return await db.transaction(async (tx) => {
+    const [org] = await tx
+      .insert(organization)
+      .values({
+        id: nanoid(),
+        name: 'Personal',
+        slug: `personal-${userId}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    await tx.insert(member).values({
+      id: nanoid(),
+      userId,
+      organizationId: org.id,
+      role: 'owner',
+      createdAt: new Date(),
+    });
+
+    return org;
+  });
+}
+
+export async function getActiveOrganization(userId: string) {
+  return db.query.member.findFirst({
+    where: eq(member.userId, userId),
+    with: {
+      organization: true,
+      // TODO: implement workspaces
+      // organization: {
+      //   with: {
+      //     workspaces: true,
+      //   },
+      // },
+    },
+  });
 }
