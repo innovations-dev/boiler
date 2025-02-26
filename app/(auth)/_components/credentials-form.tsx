@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -31,6 +31,9 @@ type CredentialsFormValues = z.infer<typeof credentialsSchema>;
 
 export function CredentialsForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+
   const form = useForm<CredentialsFormValues>({
     resolver: zodResolver(credentialsSchema),
     defaultValues: {
@@ -43,17 +46,20 @@ export function CredentialsForm() {
     { status: boolean },
     CredentialsFormValues
   >({
-    action: async (data) =>
-      authClient.signIn.email({
+    action: async (data) => {
+      const result = await authClient.signIn.email({
         email: data.email,
         password: data.password,
-      }) as Promise<BetterAuthResponse<{ status: boolean }>>,
+      });
+      // FIXME: is this even supposed to be a sserver action? we're using authClient - should be an easier way
+      return result as unknown as BetterAuthResponse<{ status: boolean }>;
+    },
     schema: credentialsSchema,
     context: 'credentials',
     successMessage: 'Signed in successfully',
     errorMessage: 'Invalid email or password',
     onSuccess: () => {
-      router.push('/dashboard');
+      router.push(callbackUrl);
     },
     resetForm: () => form.reset(),
   });

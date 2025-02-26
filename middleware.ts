@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { betterFetch } from '@better-fetch/fetch';
 import type { Session } from 'better-auth';
 
+import { checkOrganizationAccess } from '@/lib/auth/organization/access';
 // import { auth } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
@@ -46,14 +47,30 @@ export async function middleware(req: NextRequest) {
 
       if (!session?.user) {
         logger.debug('No valid session found', { pathname });
-        return NextResponse.json(
-          {
-            message: 'Authentication required',
-            code: ERROR_CODES.UNAUTHORIZED,
-            status: 401,
-          },
-          { status: 401 }
-        );
+
+        // For API routes, return 401
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json(
+            {
+              message: 'Authentication required',
+              code: ERROR_CODES.UNAUTHORIZED,
+              status: 401,
+            },
+            { status: 401 }
+          );
+        }
+
+        // For non-API routes, redirect to login with returnTo
+        const url = req.nextUrl.clone();
+        url.pathname = '/sign-in';
+        url.searchParams.set('callbackUrl', pathname + req.nextUrl.search);
+
+        logger.debug('Redirecting to sign-in', {
+          pathname,
+          redirectTo: url.pathname + url.search,
+        });
+
+        return NextResponse.redirect(url);
       }
 
       logger.debug('Valid session found', {
@@ -74,9 +91,39 @@ export async function middleware(req: NextRequest) {
             organizationSlug,
             userId: session.user.id,
             sessionId: session?.id,
-            // set active organization id
             activeOrganizationId: session.activeOrganizationId,
           });
+
+          // Check if user has access to this organization
+          const hasAccess = await checkOrganizationAccess(
+            session.user.id,
+            organizationSlug
+          );
+
+          if (!hasAccess) {
+            logger.warn('User attempted to access unauthorized organization', {
+              userId: session.user.id,
+              organizationSlug,
+              pathname,
+            });
+
+            // For API routes, return 403
+            if (pathname.startsWith('/api/')) {
+              return NextResponse.json(
+                {
+                  message: 'You do not have access to this organization',
+                  code: ERROR_CODES.FORBIDDEN,
+                  status: 403,
+                },
+                { status: 403 }
+              );
+            }
+
+            // For non-API routes, redirect to organizations list
+            const url = req.nextUrl.clone();
+            url.pathname = '/organizations';
+            return NextResponse.redirect(url);
+          }
 
           // Add organization context headers
           const requestHeaders = new Headers(req.headers);

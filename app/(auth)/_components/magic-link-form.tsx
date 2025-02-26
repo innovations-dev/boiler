@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -29,6 +30,9 @@ import { authClient } from '@/lib/auth/client';
 import { magicLinkSchema, type MagicLinkInput } from '../_types';
 
 export function MagicLinkForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+
   const form = useForm<MagicLinkInput>({
     resolver: zodResolver(magicLinkSchema),
     defaultValues: {
@@ -40,11 +44,14 @@ export function MagicLinkForm() {
     { status: boolean },
     MagicLinkInput
   >({
-    action: async (data) =>
-      authClient.signIn.magicLink({
+    action: async (data) => {
+      const result = await authClient.signIn.magicLink({
         email: data.email,
-        callbackURL: '/about',
-      }) as Promise<BetterAuthResponse<{ status: boolean }>>,
+        callbackURL: callbackUrl,
+      });
+      // FIXME: is this even supposed to be a sserver action? we're using authClient - should be an easier way
+      return result as unknown as BetterAuthResponse<{ status: boolean }>;
+    },
     schema: magicLinkSchema,
     context: 'magicLink',
     successMessage:
