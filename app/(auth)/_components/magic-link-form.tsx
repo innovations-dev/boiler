@@ -43,7 +43,7 @@ export function MagicLinkForm() {
     action: async (data) =>
       authClient.signIn.magicLink({
         email: data.email,
-        callbackURL: '/dashboard',
+        callbackURL: '/about',
       }) as Promise<BetterAuthResponse<{ status: boolean }>>,
     schema: magicLinkSchema,
     context: 'magicLink',

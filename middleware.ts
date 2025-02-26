@@ -1,26 +1,51 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { betterFetch } from '@better-fetch/fetch';
+import type { Session } from 'better-auth';
 
-import { validateSession } from '@/lib/auth/session';
+// import { auth } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
 /**
- * Middleware for handling organization routes authentication and context
+ * Middleware configuration for the application
  * Leverages Better-Auth for session validation while keeping organization logic separate
  */
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
+  logger.debug('Middleware called', {
+    pathname,
+    method: req.method,
+    headers: Object.fromEntries(req.headers.entries()),
+  });
 
-  // Only handle organization-specific routes
+  if (req.nextUrl.pathname.startsWith('/api/auth')) {
+    // Skip middleware for public paths
+    logger.debug('Skipping middleware for auth path', { pathname });
+    return NextResponse.next();
+  }
+
   if (
+    // Only handle organization-specific routes
     pathname.startsWith('/api/organizations') ||
     pathname.startsWith('/dashboard/organizations')
   ) {
     try {
-      // Use Better-Auth's session validation
-      const session = await validateSession(req);
+      logger.debug('Validating request for organization route', { pathname });
+      // const session = await auth.api.getSession(req);
+      const { data: session } = await betterFetch<Session>(
+        '/api/auth/get-session',
+        {
+          baseURL: req.nextUrl.origin,
+          headers: {
+            //get the cookie from the request
+            cookie: req.headers.get('cookie') || '',
+          },
+        }
+      );
 
       if (!session?.user) {
+        logger.debug('No valid session found', { pathname });
         return NextResponse.json(
           {
             message: 'Authentication required',
@@ -31,6 +56,12 @@ export async function middleware(req: NextRequest) {
         );
       }
 
+      logger.debug('Valid session found', {
+        pathname,
+        userId: session.user.id,
+        sessionId: session.id,
+      });
+
       // For organization routes, add our custom context
       if (pathname.includes('/organizations/')) {
         const organizationSlug = pathname
@@ -38,13 +69,32 @@ export async function middleware(req: NextRequest) {
           ?.split('/')[0];
 
         if (organizationSlug) {
+          logger.debug('Adding organization context', {
+            pathname,
+            organizationSlug,
+            userId: session.user.id,
+            sessionId: session?.id,
+            // set active organization id
+            activeOrganizationId: session.activeOrganizationId,
+          });
+
           // Add organization context headers
           const requestHeaders = new Headers(req.headers);
           requestHeaders.set('x-organization-slug', organizationSlug);
           // Add user context headers
           requestHeaders.set('x-user-id', session.user.id);
-          // Add session tracking header for metrics
-          requestHeaders.set('x-session-id', session.sessionId || '');
+          if (session?.id) {
+            // Add session tracking header for metrics
+            requestHeaders.set('x-session-id', session.id);
+          }
+
+          if (session.activeOrganizationId) {
+            // set active organization id
+            requestHeaders.set(
+              'x-active-organization-id',
+              session.activeOrganizationId
+            );
+          }
 
           return NextResponse.next({
             request: {
@@ -56,6 +106,12 @@ export async function middleware(req: NextRequest) {
 
       return NextResponse.next();
     } catch (error) {
+      logger.error('Error in middleware', {
+        pathname,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
       if (error instanceof AppError) {
         return NextResponse.json(
           {
@@ -70,10 +126,10 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  logger.debug('Passing through middleware', { pathname });
   return NextResponse.next();
 }
 
-// Only match organization routes - let Better-Auth handle its own routes
 export const config = {
   matcher: ['/api/organizations/:path*', '/dashboard/organizations/:path*'],
 };

@@ -7,6 +7,7 @@ import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from 'sonner';
 
 import { generateMetadata as meta } from '@/config/meta.config';
+import { env } from '@/env';
 import { ErrorHandler } from '@/lib/auth/error/error-handler';
 import { logger } from '@/lib/logger';
 
@@ -27,7 +28,7 @@ const geistMono = Geist_Mono({
 
 // Configure logger based on environment
 logger.configure({
-  verbose: process.env.NODE_ENV === 'development',
+  verbose: env.NODE_ENV === 'development',
   minimalMetadataKeys: ['component', 'context', 'id'],
 });
 

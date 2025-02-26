@@ -1,9 +1,21 @@
 import { BetterAuthOptions, User } from 'better-auth';
+import {
+  admin,
+  customSession,
+  magicLink,
+  multiSession,
+  openAPI,
+  organization,
+} from 'better-auth/plugins';
 
 import { env } from '@/env';
+import { getActiveOrganization } from '@/lib/db/queries/organizations';
 import { sendEmail } from '@/lib/email/service';
 import { logger } from '@/lib/logger';
 import { getBaseUrl } from '@/lib/utils';
+
+import { betterAuthOptions } from '../options';
+import { adminConfig, magicLinkConfig, organizationConfig } from '../plugins';
 
 const baseURL = getBaseUrl().toString();
 
@@ -71,3 +83,57 @@ export const providers: BetterAuthOptions = {
     github: githubConfig,
   },
 };
+
+export const betterAuthPlugins: BetterAuthOptions['plugins'] = [
+  admin(adminConfig),
+  organization(organizationConfig),
+  magicLink(magicLinkConfig),
+  openAPI(),
+  multiSession(),
+  customSession(
+    async ({ user, session }) => {
+      logger.debug('🚀 ~ customSession ~ user:', session);
+      try {
+        const memberWithOrg = await getActiveOrganization(user.id);
+        const activeOrganization = memberWithOrg?.organization;
+
+        // TODO: implement workspaces
+        // const activeWorkspace = await getActiveWorkspace();
+        logger.debug('updating session', {
+          context: 'auth config',
+          component: 'customSession',
+          session,
+          user,
+          activeOrganizationId: activeOrganization?.id,
+        });
+
+        return {
+          ...session,
+          user,
+          activeOrganizationId: activeOrganization?.id,
+          // TODO: implement workspaces
+          // activeWorkspaceId: activeWorkspace?.id, // TODO: is this correct?
+        };
+      } catch (error) {
+        logger.error(
+          'customSession error:',
+          {
+            component: 'CustomSession',
+            userId: user?.id,
+          },
+          error
+        );
+        return {
+          session,
+          user,
+          activeOrganizationId: null,
+          // TODO: implement workspaces
+          // activeWorkspaceId: null, // TODO: is this correct?
+        };
+      }
+    },
+    {
+      ...betterAuthOptions,
+    }
+  ),
+];
