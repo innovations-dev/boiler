@@ -104,3 +104,15 @@ export const ROLE_PERMISSIONS: Record<
   MEMBER: ['org:view', 'member:view', 'settings:view'],
   GUEST: ['org:view', 'member:view'],
 } as const;
+
+export const organizationSettingsSchema = z.object({
+  name: z.string().min(2).max(50),
+  slug: z
+    .string()
+    .min(2)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/),
+  logo: z.string().nullable().optional(),
+});
+
+export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>;

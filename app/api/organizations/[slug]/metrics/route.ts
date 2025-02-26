@@ -14,9 +14,10 @@ const metricsCache = new Map<string, { data: any; timestamp: number }>();
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params;
     const userId = req.headers.get('x-user-id');
     const sessionId = req.headers.get('x-session-id');
 
@@ -29,7 +30,7 @@ export async function GET(
 
     // Get organization and validate access
     const org = await db.query.organization.findFirst({
-      where: eq(organization.slug, params.slug),
+      where: eq(organization.slug, slug!),
       with: {
         members: {
           where: eq(member.userId, userId),
@@ -115,7 +116,6 @@ export async function GET(
   } catch (error) {
     logger.error('Error fetching organization metrics', {
       error,
-      slug: params.slug,
     });
 
     if (error instanceof AppError) {

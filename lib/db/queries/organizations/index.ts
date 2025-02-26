@@ -6,6 +6,11 @@ import { nanoid } from 'nanoid';
 import { db } from '@/lib/db';
 import type { Member, Organization } from '@/lib/db/_schema';
 import { member, organization, session } from '@/lib/db/schema';
+import { handleUnknownError } from '@/lib/errors';
+import {
+  OrganizationSettings,
+  organizationSettingsSchema,
+} from '@/lib/types/organization';
 
 export async function getOrganization(
   id: string
@@ -157,4 +162,31 @@ export async function getActiveOrganization(userId: string) {
       // },
     },
   });
+}
+
+export async function updateOrganizationSettings(
+  slug: string,
+  data: OrganizationSettings
+) {
+  try {
+    // Validate input
+    const validatedData = organizationSettingsSchema.parse(data);
+
+    // Update organization
+    const updatedOrg = await db
+      .update(organization)
+      .set({
+        name: validatedData.name,
+        slug: validatedData.slug,
+        logo: validatedData.logo,
+        updatedAt: new Date(),
+      })
+      .where(eq(organization.slug, slug))
+      .returning();
+
+    return { success: true, data: updatedOrg[0] };
+  } catch (error) {
+    // Handle errors
+    return handleUnknownError(error);
+  }
 }

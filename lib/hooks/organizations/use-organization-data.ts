@@ -80,7 +80,7 @@ export function useOrganizationMember(slug: string, userId: string) {
 
 export function useOrganizationMetrics(slug: string) {
   return useQuery({
-    queryKey: queryKeys.organizations.metrics(slug),
+    queryKey: queryKeys.organizations.metrics.all(slug),
     queryFn: () => fetchOrganizationMetrics(slug),
     refetchInterval: 30000, // Refetch every 30 seconds
   });

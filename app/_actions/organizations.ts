@@ -15,7 +15,9 @@ import {
   getUserOrganizations,
   setActiveOrganization,
   updateOrganization,
+  updateOrganizationSettings,
 } from '@/lib/db/queries/organizations';
+import { organizationSettingsSchema } from '@/lib/types/organization';
 
 const getOrganizationInputSchema = z.string();
 const getUserOrganizationsInputSchema = z.string();
@@ -91,5 +93,17 @@ export async function setActiveOrganizationAction(input: {
     handler: () => setActiveOrganization(input),
     input,
     context: 'setActiveOrganization',
+  });
+}
+
+export async function updateOrganizationSettingsAction(
+  slug: string,
+  input: z.infer<typeof organizationSettingsSchema>
+) {
+  return createAction({
+    schema: organizationSettingsSchema,
+    handler: () => updateOrganizationSettings(slug, input),
+    input,
+    context: 'updateOrganizationSettings',
   });
 }
