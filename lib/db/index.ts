@@ -20,10 +20,16 @@ import * as schema from './schema';
  * @private
  * @const {import("@libsql/client").Client}
  */
-const turso = createClient({
-  url: env.TURSO_DATABASE_URL!,
-  authToken: env.TURSO_AUTH_TOKEN, // only required for production db
-});
+const turso = createClient(
+  env.NODE_ENV === 'development'
+    ? {
+        url: env.TURSO_DATABASE_URL!,
+      }
+    : {
+        url: env.TURSO_DATABASE_URL!,
+        authToken: env.TURSO_AUTH_TOKEN, // only required for production db
+      }
+);
 
 /**
  * Configured Drizzle ORM instance with Turso client

@@ -61,7 +61,10 @@ export const navigationRoutes = {
     { name: 'Sign in', href: '/sign-in' },
     { name: 'Get Started', href: '/register' },
   ],
-  admin: [{ name: 'Dashboard', href: '/dashboard' }],
+  admin: [
+    { name: 'Dashboard', href: '/organizations' },
+    { name: 'Sign out', href: '/sign-out' },
+  ],
   legal: [
     { name: 'Privacy Policy', href: '/policies/privacy' },
     { name: 'Terms of Service', href: '/policies/terms' },

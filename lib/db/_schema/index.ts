@@ -30,7 +30,8 @@ export const createMemberSchema = z.object({
 export type User = z.infer<typeof userSchema>;
 export type Organization = z.infer<typeof organizationSchema>;
 export type Member = z.infer<typeof memberSchema>;
-export const corecedSessionSelectSchema = createSelectSchema(session, {
+
+export const coercedSessionSelectSchema = createSelectSchema(session, {
   expiresAt: z.coerce.string(),
   createdAt: z.coerce.string(),
   updatedAt: z.coerce.string(),
@@ -43,7 +44,7 @@ export const sessionSelectSchema = createSelectSchema(session);
 export const sessionInsertSchema = createInsertSchema(session);
 export const sessionUpdateSchema = createUpdateSchema(session);
 
-export type CoercedSession = z.infer<typeof corecedSessionSelectSchema>;
+export type CoercedSession = z.infer<typeof coercedSessionSelectSchema>;
 export type Session = z.infer<typeof sessionSelectSchema>;
 export type SessionInsert = typeof session.$inferInsert;
 

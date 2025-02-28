@@ -1,25 +1,55 @@
-import { NextRequest } from 'next/server';
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+import { and, eq, sql } from 'drizzle-orm';
 
+import { getOrganizationAccess } from '@/lib/auth/organization/get-organization-access';
 import { db } from '@/lib/db';
-import { invitation, member, organization, session } from '@/lib/db/schema';
+import {
+  invitation,
+  member,
+  organization,
+  session as sessionTable,
+} from '@/lib/db/schema';
 import { AppError } from '@/lib/errors';
-import { logger } from '@/lib/logger';
+import { logger, withOrganizationContext } from '@/lib/logger';
 import { organizationMetricsSchema } from '@/lib/types/organization';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
-// 5 minutes cache time for metrics
-const METRICS_CACHE_TIME = 5 * 60 * 1000;
-const metricsCache = new Map<string, { data: any; timestamp: number }>();
+// Define cache configuration
+export const dynamic = 'force-dynamic'; // Or use 'auto' if you want Next.js to decide
+export const revalidate = 300; // 5 minutes (300 seconds) cache time
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  request: NextRequest,
+  { params }: { params: { slug: string } }
 ) {
+  const orgLogger = withOrganizationContext(params.slug);
+
   try {
-    const { slug } = await params;
-    const userId = req.headers.get('x-user-id');
-    const sessionId = req.headers.get('x-session-id');
+    orgLogger.debug('Fetching organization metrics');
+
+    const { hasAccess, session } = await getOrganizationAccess(params.slug);
+
+    if (!session) {
+      orgLogger.warn('Unauthenticated metrics access attempt');
+      return NextResponse.json(
+        { message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!hasAccess) {
+      orgLogger.warn('Unauthorized metrics access attempt', {
+        userId: session.user.id,
+      });
+      return NextResponse.json(
+        { message: 'You do not have access to this organization' },
+        { status: 403 }
+      );
+    }
+
+    const { slug } = params;
+    const userId = request.headers.get('x-user-id');
+    const sessionId = request.headers.get('x-session-id');
 
     if (!userId) {
       throw new AppError('User ID not found in request', {
@@ -28,7 +58,6 @@ export async function GET(
       });
     }
 
-    // Get organization and validate access
     const org = await db.query.organization.findFirst({
       where: eq(organization.slug, slug!),
       with: {
@@ -52,56 +81,60 @@ export async function GET(
       });
     }
 
-    // Check cache first
-    const cacheKey = `metrics:${org.id}`;
-    const cached = metricsCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < METRICS_CACHE_TIME) {
-      return Response.json(cached.data);
-    }
-
-    // Get metrics data efficiently with a single query
-    const [metrics] = await db
-      .select({
-        totalMembers: sql<number>`count(distinct ${member.id})`,
-        activeSessions: sql<number>`count(distinct ${session.id})`,
-        pendingInvitations: sql<number>`count(distinct case when ${invitation.status} = 'pending' then ${invitation.id} end)`,
-        lastActivityAt: sql<string>`max(${session.updatedAt})`,
-      })
-      .from(member)
-      .leftJoin(
-        session,
-        and(
-          eq(session.activeOrganizationId, member.organizationId),
-          gt(session.expiresAt, new Date())
-        )
-      )
-      .leftJoin(
-        invitation,
-        and(
-          eq(invitation.organizationId, member.organizationId),
-          eq(invitation.status, 'pending')
-        )
-      )
-      .where(eq(member.organizationId, org.id))
-      .groupBy(member.organizationId);
-
-    const result = {
-      totalMembers: metrics?.totalMembers ?? 0,
-      activeSessions: metrics?.activeSessions ?? 0,
-      pendingInvitations: metrics?.pendingInvitations ?? 0,
-      lastActivityAt: metrics?.lastActivityAt
-        ? new Date(metrics.lastActivityAt)
-        : new Date(),
+    const metrics = {
+      totalMembers: 0,
+      activeSessions: 0,
+      pendingInvitations: 0,
+      lastActivityAt: new Date(),
       lastUpdated: new Date(),
     };
 
-    // Cache the results
-    metricsCache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now(),
-    });
+    const [memberCount, invitationCount, sessionData] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(member)
+        .where(eq(member.organizationId, org.id)),
 
-    // Track metrics access for analytics
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(invitation)
+        .where(
+          and(
+            eq(invitation.organizationId, org.id),
+            eq(invitation.status, 'pending')
+          )
+        ),
+
+      db
+        .select({
+          count: sql<number>`count(*)`,
+          lastActivity: sql<string>`max(${sessionTable.updatedAt})`,
+        })
+        .from(sessionTable)
+        .where(
+          and(
+            eq(sessionTable.activeOrganizationId, org.id),
+            sql`${sessionTable.expiresAt} > datetime('now')`
+          )
+        )
+        .catch((error) => {
+          orgLogger.error('Error fetching session data', {}, error);
+          return [{ count: 0, lastActivity: null }];
+        }),
+    ]);
+
+    metrics.totalMembers = memberCount[0]?.count || 0;
+    metrics.pendingInvitations = invitationCount[0]?.count || 0;
+    metrics.activeSessions = sessionData[0]?.count || 0;
+    metrics.lastActivityAt = sessionData[0]?.lastActivity
+      ? new Date(sessionData[0].lastActivity)
+      : new Date();
+
+    const result = {
+      ...metrics,
+      lastUpdated: new Date(),
+    };
+
     if (sessionId) {
       logger.info('Organization metrics accessed', {
         type: 'organization_metrics_accessed',
@@ -112,11 +145,13 @@ export async function GET(
       });
     }
 
+    orgLogger.info('Metrics accessed successfully', {
+      userId: session.user.id,
+    });
+
     return Response.json(organizationMetricsSchema.parse(result));
   } catch (error) {
-    logger.error('Error fetching organization metrics', {
-      error,
-    });
+    orgLogger.error('Error fetching organization metrics', {}, error);
 
     if (error instanceof AppError) {
       return Response.json(
@@ -124,6 +159,9 @@ export async function GET(
         { status: error.status }
       );
     }
-    throw error;
+    return Response.json(
+      { message: 'Failed to fetch metrics' },
+      { status: 500 }
+    );
   }
 }

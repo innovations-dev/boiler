@@ -92,7 +92,7 @@ export const betterAuthPlugins: BetterAuthOptions['plugins'] = [
   multiSession(),
   customSession(
     async ({ user, session }) => {
-      logger.debug('🚀 ~ customSession ~ user:', session);
+      logger.debug('🚀 ~ customSession ~ session:', { session, user });
       try {
         const memberWithOrg = await getActiveOrganization(user.id);
         const activeOrganization = memberWithOrg?.organization;

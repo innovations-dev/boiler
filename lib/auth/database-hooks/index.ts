@@ -30,7 +30,7 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
             existingMember?.organization ||
             (await createPersonalOrganization(betterAuthSession.userId));
 
-          logger.debug('Setting active organization', {
+          logger.debug('session:create:after ~ Setting active organization', {
             userId: betterAuthSession.userId,
             organizationId: org.id,
             organizationSlug: org.slug,
@@ -46,7 +46,7 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
           return;
         } catch (error) {
           logger.error(
-            'Failed to set active organization',
+            'session:create:after ~ Failed to set active organization',
             {
               component: 'DatabaseHooks',
               path: 'auth/database-hooks',

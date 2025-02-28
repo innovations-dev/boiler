@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Shell } from '@/components/shell';
 import { getOrganization } from '@/lib/db/queries/organizations';
 
-import { OrganizationForm } from '../components/settings/organization-form';
+import { OrganizationForm } from '../../../_components/settings/organization-form';
 
 interface SettingsPageProps {
   params: Promise<{ slug: string }>;

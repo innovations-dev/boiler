@@ -1,182 +1,73 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { betterFetch } from '@better-fetch/fetch';
-import type { Session } from 'better-auth';
+import { getSessionCookie } from 'better-auth';
 
-import { checkOrganizationAccess } from '@/lib/auth/organization/access';
-// import { auth } from '@/lib/auth';
-import { AppError } from '@/lib/errors';
-import { logger } from '@/lib/logger';
-import { ERROR_CODES } from '@/lib/types/responses/error';
+import { logger, withOrganizationContext } from '@/lib/logger';
 
 /**
  * Middleware configuration for the application
  * Leverages Better-Auth for session validation while keeping organization logic separate
  */
-export async function middleware(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
-  logger.debug('Middleware called', {
-    pathname,
-    method: req.method,
-    headers: Object.fromEntries(req.headers.entries()),
-  });
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
 
-  if (req.nextUrl.pathname.startsWith('/api/auth')) {
-    // Skip middleware for public paths
-    logger.debug('Skipping middleware for auth path', { pathname });
+  // Skip middleware for auth paths
+  if (pathname.startsWith('/api/auth')) {
     return NextResponse.next();
   }
 
+  // Only check protected routes
   if (
-    // Only handle organization-specific routes
     pathname.startsWith('/api/organizations') ||
-    pathname.startsWith('/dashboard/organizations')
+    pathname.startsWith('/organizations')
   ) {
-    try {
-      logger.debug('Validating request for organization route', { pathname });
-      // const session = await auth.api.getSession(req);
-      const { data: session } = await betterFetch<Session>(
-        '/api/auth/get-session',
-        {
-          baseURL: req.nextUrl.origin,
-          headers: {
-            //get the cookie from the request
-            cookie: req.headers.get('cookie') || '',
-          },
-        }
-      );
+    // Check for session cookie existence (lightweight)
+    const sessionCookie = getSessionCookie(request);
 
-      if (!session?.user) {
-        logger.debug('No valid session found', { pathname });
+    if (!sessionCookie) {
+      logger.debug('No session cookie found', { pathname });
 
-        // For API routes, return 401
-        if (pathname.startsWith('/api/')) {
-          return NextResponse.json(
-            {
-              message: 'Authentication required',
-              code: ERROR_CODES.UNAUTHORIZED,
-              status: 401,
-            },
-            { status: 401 }
-          );
-        }
-
-        // For non-API routes, redirect to login with returnTo
-        const url = req.nextUrl.clone();
-        url.pathname = '/sign-in';
-        url.searchParams.set('callbackUrl', pathname + req.nextUrl.search);
-
-        logger.debug('Redirecting to sign-in', {
-          pathname,
-          redirectTo: url.pathname + url.search,
-        });
-
-        return NextResponse.redirect(url);
-      }
-
-      logger.debug('Valid session found', {
-        pathname,
-        userId: session.user.id,
-        sessionId: session.id,
-      });
-
-      // For organization routes, add our custom context
-      if (pathname.includes('/organizations/')) {
-        const organizationSlug = pathname
-          .split('/organizations/')[1]
-          ?.split('/')[0];
-
-        if (organizationSlug) {
-          logger.debug('Adding organization context', {
-            pathname,
-            organizationSlug,
-            userId: session.user.id,
-            sessionId: session?.id,
-            activeOrganizationId: session.activeOrganizationId,
-          });
-
-          // Check if user has access to this organization
-          const hasAccess = await checkOrganizationAccess(
-            session.user.id,
-            organizationSlug
-          );
-
-          if (!hasAccess) {
-            logger.warn('User attempted to access unauthorized organization', {
-              userId: session.user.id,
-              organizationSlug,
-              pathname,
-            });
-
-            // For API routes, return 403
-            if (pathname.startsWith('/api/')) {
-              return NextResponse.json(
-                {
-                  message: 'You do not have access to this organization',
-                  code: ERROR_CODES.FORBIDDEN,
-                  status: 403,
-                },
-                { status: 403 }
-              );
-            }
-
-            // For non-API routes, redirect to organizations list
-            const url = req.nextUrl.clone();
-            url.pathname = '/organizations';
-            return NextResponse.redirect(url);
-          }
-
-          // Add organization context headers
-          const requestHeaders = new Headers(req.headers);
-          requestHeaders.set('x-organization-slug', organizationSlug);
-          // Add user context headers
-          requestHeaders.set('x-user-id', session.user.id);
-          if (session?.id) {
-            // Add session tracking header for metrics
-            requestHeaders.set('x-session-id', session.id);
-          }
-
-          if (session.activeOrganizationId) {
-            // set active organization id
-            requestHeaders.set(
-              'x-active-organization-id',
-              session.activeOrganizationId
-            );
-          }
-
-          return NextResponse.next({
-            request: {
-              headers: requestHeaders,
-            },
-          });
-        }
-      }
-
-      return NextResponse.next();
-    } catch (error) {
-      logger.error('Error in middleware', {
-        pathname,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-
-      if (error instanceof AppError) {
+      // Handle API routes
+      if (pathname.startsWith('/api/')) {
         return NextResponse.json(
-          {
-            message: error.message,
-            code: error.code,
-            status: error.status,
-          },
-          { status: error.status }
+          { message: 'Authentication required' },
+          { status: 401 }
         );
       }
-      throw error;
+
+      // Redirect to sign-in for non-API routes
+      const url = request.nextUrl.clone();
+      url.pathname = '/sign-in';
+      url.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
+      return NextResponse.redirect(url);
+    }
+
+    // For organization-specific routes, add headers for downstream use
+    if (pathname.includes('/organizations/')) {
+      const organizationSlug = pathname
+        .split('/organizations/')[1]
+        ?.split('/')[0];
+
+      if (organizationSlug) {
+        // Use organization-specific logger
+        const orgLogger = withOrganizationContext(organizationSlug);
+        orgLogger.debug('Processing organization route in middleware', {
+          path: pathname,
+        });
+
+        // Add organization context headers
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set('x-organization-slug', organizationSlug);
+
+        return NextResponse.next({
+          request: { headers: requestHeaders },
+        });
+      }
     }
   }
 
-  logger.debug('Passing through middleware', { pathname });
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/organizations/:path*', '/dashboard/organizations/:path*'],
+  matcher: ['/api/organizations/:path*', '/organizations/:path*'],
 };

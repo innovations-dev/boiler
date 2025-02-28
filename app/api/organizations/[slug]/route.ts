@@ -1,14 +1,29 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { getOrganizationAccess } from '@/lib/auth/organization/get-organization-access';
 import { db } from '@/lib/db';
 import { member, organization } from '@/lib/db/schema';
 import { AppError } from '@/lib/errors';
+import { logger, withOrganizationContext } from '@/lib/logger';
 import { organizationSchema } from '@/lib/types/organization';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
-// Validate organization exists and user is a member
+/**
+ * Validate organization exists and user is a member
+ * @param slug The slug of the organization
+ * @param userId The ID of the user
+ * @returns The organization and member
+ *
+ * @example
+ * const { organization, member } = await validateOrganizationAccess('my-org', '123');
+ * console.log(organization);
+ * console.log(member);
+ *
+ * @throws {AppError} If the organization is not found
+ * @throws {AppError} If the user is not a member of the organization
+ */
 async function validateOrganizationAccess(slug: string, userId: string) {
   const org = await db.query.organization.findFirst({
     where: eq(organization.slug, slug),
@@ -36,12 +51,60 @@ async function validateOrganizationAccess(slug: string, userId: string) {
   return { organization: org, member: org.members[0] };
 }
 
+/**
+ * Get organization by slug
+ * @param request The request object
+ * @param params The parameters object
+ * @returns The organization
+ *
+ * @example
+ * const organization = await GET(request, { params: { slug: 'my-org' } });
+ * console.log(organization);
+ *
+ * @throws {AppError} If the organization is not found
+ * @throws {AppError} If the user is not a member of the organization
+ */
+
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  // Create organization-specific logger
+  const orgLogger = withOrganizationContext(params.slug);
+
   try {
-    const userId = req.headers.get('x-user-id');
+    orgLogger.debug('Processing organization API request');
+
+    const { hasAccess, session } = await getOrganizationAccess(params.slug);
+
+    if (!session) {
+      orgLogger.warn('Unauthenticated access attempt', {
+        path: request.nextUrl.pathname,
+        // uses vercel ip header: https://vercel.com/docs/edge-network/headers/request-headers#x-real-ip
+        ip: request.headers.get('x-real-ip') || 'unknown',
+      });
+
+      return NextResponse.json(
+        { message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!hasAccess) {
+      orgLogger.warn('Unauthorized access attempt', {
+        userId: session.user.id,
+        path: request.nextUrl.pathname,
+      });
+
+      return NextResponse.json(
+        { message: 'You do not have access to this organization' },
+        { status: 403 }
+      );
+    }
+
+    orgLogger.info('Authorized access', { userId: session.user.id });
+
+    const userId = request.headers.get('x-user-id');
     if (!userId) {
       throw new AppError('User ID not found in request', {
         code: ERROR_CODES.UNAUTHORIZED,
@@ -56,13 +119,18 @@ export async function GET(
 
     return Response.json(organizationSchema.parse(organization));
   } catch (error) {
-    if (error instanceof AppError) {
-      return Response.json(
-        { message: error.message, code: error.code },
-        { status: error.status }
-      );
-    }
-    throw error;
+    orgLogger.error(
+      'Error in organization API route',
+      {
+        path: request.nextUrl.pathname,
+      },
+      error
+    );
+
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 

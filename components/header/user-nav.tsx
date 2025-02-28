@@ -13,10 +13,20 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '../spinner';
 import { Button, buttonVariants } from '../ui/button';
 
-function UserNavContent({ items }: { items: typeof navigationRoutes.auth }) {
+function UserNavContent({
+  authenticated,
+  unauthenticated,
+}: {
+  authenticated: typeof navigationRoutes.admin;
+  unauthenticated: typeof navigationRoutes.admin;
+}) {
   const router = useRouter();
   const { isPending, error, data } = authClient.useSession();
   const pathname = usePathname();
+
+  const items = data?.session ? authenticated : unauthenticated;
+  console.log('🚀 ~ userNavContent ~ items:', items);
+
   if (isPending) {
     return <Spinner />;
   }
@@ -79,10 +89,19 @@ function UserNavContent({ items }: { items: typeof navigationRoutes.auth }) {
   );
 }
 
-export function UserNav({ items }: { items: typeof navigationRoutes.auth }) {
+export function UserNav({
+  authenticated,
+  unauthenticated,
+}: {
+  authenticated: typeof navigationRoutes.admin;
+  unauthenticated: typeof navigationRoutes.auth;
+}) {
   return (
     <Suspense fallback={<Spinner />}>
-      <UserNavContent items={items} />
+      <UserNavContent
+        authenticated={authenticated}
+        unauthenticated={unauthenticated}
+      />
     </Suspense>
   );
 }

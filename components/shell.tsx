@@ -6,9 +6,9 @@ import { usePathname } from 'next/navigation';
 // Dynamically import the OrganizationNavWrapper
 const OrganizationNavWrapper = dynamic(
   () =>
-    import(
-      '@/app/(dashboard)/organizations/[slug]/components/navigation/org-nav-wrapper'
-    ).then((mod) => mod.OrganizationNavWrapper),
+    import('@/app/(dashboard)/_components/navigation/org-nav-wrapper').then(
+      (mod) => mod.OrganizationNavWrapper
+    ),
   {
     ssr: false,
     loading: () => (

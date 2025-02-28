@@ -272,7 +272,10 @@ export function SiteHeader() {
         />
       </Header.Main>
       <Header.RightElement>
-        <UserNav items={navigationRoutes.auth} />
+        <UserNav
+          authenticated={navigationRoutes.admin}
+          unauthenticated={navigationRoutes.auth}
+        />
       </Header.RightElement>
       <MobileNav items={navigationRoutes.main} />
     </Header>

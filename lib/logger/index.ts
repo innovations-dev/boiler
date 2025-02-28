@@ -120,7 +120,7 @@ class Logger {
   private static instance: Logger;
   private readonly isDevelopment: boolean;
   private config: LogConfig = {
-    verbose: false,
+    verbose: true,
     minimalMetadataKeys: ['component', 'context', 'id'],
     scopedVerbosity: new Map(),
   };
@@ -394,3 +394,31 @@ class Logger {
 
 // Export singleton instance
 export const logger = Logger.getInstance();
+
+/**
+ * Adds organization context to the logger
+ * @param {string} organizationSlug The slug of the organization
+ * @returns {Logger} The logger with organization context
+ *
+ * @example
+ * const loggerWithOrg = withOrganizationContext('my-org');
+ * loggerWithOrg.debug('User logged in', { userId: '123' });
+ *
+ * @example
+ * const loggerWithOrg = withOrganizationContext('my-org');
+ * loggerWithOrg.debug('User logged in', { userId: '123' });
+ *
+ * @example
+ */
+export function withOrganizationContext(organizationSlug: string) {
+  return {
+    debug: (message: string, meta?: Record<string, unknown>) =>
+      logger.debug(message, { ...meta, organizationSlug }),
+    info: (message: string, meta?: Record<string, unknown>) =>
+      logger.info(message, { ...meta, organizationSlug }),
+    warn: (message: string, meta?: Record<string, unknown>) =>
+      logger.warn(message, { ...meta, organizationSlug }),
+    error: (message: string, meta?: Record<string, unknown>, error?: unknown) =>
+      logger.error(message, { ...meta, organizationSlug }, error),
+  };
+}
