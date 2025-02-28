@@ -14,7 +14,6 @@ import { sendEmail } from '@/lib/email/service';
 import { logger } from '@/lib/logger';
 import { getBaseUrl } from '@/lib/utils';
 
-import { betterAuthOptions } from '../options';
 import { adminConfig, magicLinkConfig, organizationConfig } from '../plugins';
 
 const baseURL = getBaseUrl().toString();
@@ -92,7 +91,11 @@ export const betterAuthPlugins: BetterAuthOptions['plugins'] = [
   multiSession(),
   customSession(
     async ({ user, session }) => {
-      logger.debug('🚀 ~ customSession ~ session:', { session, user });
+      logger.debug('customSession processing', {
+        component: 'CustomSession',
+        userId: user?.id,
+        // Don't log the entire session object as it may contain sensitive data
+      });
       try {
         const memberWithOrg = await getActiveOrganization(user.id);
         const activeOrganization = memberWithOrg?.organization;
@@ -102,8 +105,7 @@ export const betterAuthPlugins: BetterAuthOptions['plugins'] = [
         logger.debug('updating session', {
           context: 'auth config',
           component: 'customSession',
-          session,
-          user,
+          userId: user?.id,
           activeOrganizationId: activeOrganization?.id,
         });
 
@@ -132,8 +134,11 @@ export const betterAuthPlugins: BetterAuthOptions['plugins'] = [
         };
       }
     },
+    // Create a separate options object instead of reusing betterAuthOptions
     {
-      ...betterAuthOptions,
+      baseURL,
+      secret: env.BETTER_AUTH_SECRET,
+      trustedOrigins: [baseURL],
     }
   ),
 ];

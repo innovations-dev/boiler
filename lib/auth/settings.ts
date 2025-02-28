@@ -1,5 +1,7 @@
 // import { APIError as BetterAuthAPIError } from 'better-auth/api';
 
+import { env } from '@/env';
+
 export const settings = {
   user: {
     deleteUser: {
@@ -32,7 +34,10 @@ export const settings = {
   session: {
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60, // 5 minutes
+      maxAge: 60 * 60 * 24 * 7, // 7 days instead of 5 minutes
+      secure: process.env.NODE_ENV === 'production', // Only use HTTPS in production
+      httpOnly: true, // Prevent JavaScript access
+      sameSite: 'lax', // Protect against CSRF
     },
   },
 };

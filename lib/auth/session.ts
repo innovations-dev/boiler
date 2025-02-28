@@ -1,7 +1,9 @@
 import { type NextRequest } from 'next/server';
 
+import { auth } from '@/lib/auth';
 import { authClient } from '@/lib/auth/client';
 import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 export interface Session {
   user: {
@@ -9,6 +11,14 @@ export interface Session {
     email: string;
   };
   sessionId?: string; // Optional as it might not always be available from Better-Auth
+}
+
+// Define a type for device sessions
+interface DeviceSession {
+  id: string;
+  userId: string;
+  isActive?: boolean;
+  [key: string]: any;
 }
 
 /**
@@ -33,24 +43,179 @@ export async function validateSession(
   }
 
   try {
-    // @ts-ignore - Better-Auth types are not up to date
-    const session = await authClient.validateRequest(req);
+    // Check if there's a session cookie (just for logging purposes)
+    const allCookies = req.cookies.getAll();
+    const sessionCookie = allCookies.find((cookie) =>
+      cookie.name.startsWith('better-auth.session_token')
+    );
 
-    if (!session?.user) {
+    if (!sessionCookie) {
+      logger.debug('No session cookie found', {
+        component: 'SessionValidation',
+        path: pathname,
+        allCookies: allCookies.map((c) => c.name),
+      });
       return null;
     }
 
-    return {
-      user: {
-        id: session.user.id,
-        email: session.user.email,
-      },
-      sessionId: session.sessionId,
-    };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
+    logger.debug('Found session cookie', {
+      component: 'SessionValidation',
+      path: pathname,
+      cookieName: sessionCookie.name,
+      cookieValueLength: sessionCookie.value.length,
+    });
+
+    // Following Better-Auth's recommended approach for session validation
+    // Pass the entire request headers to auth.api.getSession
+    try {
+      logger.debug('Validating session with auth.api.getSession', {
+        component: 'SessionValidation',
+        path: pathname,
+      });
+
+      // Create headers object from the request
+      const headers = new Headers();
+
+      // Copy all headers from the request
+      req.headers.forEach((value, key) => {
+        headers.set(key, value);
+      });
+
+      // Ensure the cookie header is set correctly
+      if (!headers.has('cookie') && sessionCookie) {
+        headers.set('Cookie', `${sessionCookie.name}=${sessionCookie.value}`);
+      }
+
+      // Use auth.api.getSession as recommended in the documentation
+      // @ts-ignore - Better-Auth types are not up to date
+      const session = await auth.api.getSession({
+        headers,
+        // Disable cookie cache to ensure we're getting the latest session data
+        query: {
+          disableCookieCache: true,
+        },
+      });
+
+      if (session?.user) {
+        logger.debug('Session validated successfully', {
+          component: 'SessionValidation',
+          path: pathname,
+          userId: session.user.id,
+        });
+
+        return {
+          user: {
+            id: session.user.id,
+            email: session.user.email,
+          },
+          sessionId: session.session?.id,
+        };
+      } else {
+        logger.debug('Session validation failed - no user in session', {
+          component: 'SessionValidation',
+          path: pathname,
+          sessionKeys: session ? Object.keys(session) : [],
+        });
+      }
+    } catch (error) {
+      logger.error(
+        'Error validating session',
+        {
+          component: 'SessionValidation',
+          path: pathname,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        error
+      );
+
+      // If we get here, try one more approach - use the multi-session API if available
+      try {
+        logger.debug('Trying multi-session API', {
+          component: 'SessionValidation',
+          path: pathname,
+        });
+
+        // Check if listSessions method exists (for multi-session support)
+        // @ts-ignore - Better-Auth types are not up to date
+        if (typeof auth.api.listSessions === 'function') {
+          // @ts-ignore - Better-Auth types are not up to date
+          const sessions = await auth.api.listSessions({
+            headers: req.headers,
+          });
+
+          if (sessions && Array.isArray(sessions) && sessions.length > 0) {
+            // Find the active session
+            const activeSession = sessions.find(
+              (session: DeviceSession) => session.isActive
+            );
+
+            if (activeSession) {
+              logger.debug('Found active multi-session', {
+                component: 'SessionValidation',
+                path: pathname,
+                sessionId: activeSession.id,
+              });
+
+              // Get user information - we need to make a separate call to get user details
+              try {
+                // @ts-ignore - Better-Auth types are not up to date
+                const userInfo = await auth.api.getUser({
+                  headers: req.headers,
+                });
+
+                if (userInfo) {
+                  return {
+                    user: {
+                      id: userInfo.id,
+                      email: userInfo.email || 'unknown',
+                    },
+                    sessionId: activeSession.id,
+                  };
+                }
+              } catch (userError) {
+                logger.debug('Failed to get user info', {
+                  component: 'SessionValidation',
+                  path: pathname,
+                  error:
+                    userError instanceof Error
+                      ? userError.message
+                      : String(userError),
+                });
+
+                // Fallback to just using the session ID
+                return {
+                  user: {
+                    id: activeSession.userId,
+                    email: 'unknown@example.com', // We don't have the email
+                  },
+                  sessionId: activeSession.id,
+                };
+              }
+            }
+          }
+        }
+      } catch (multiSessionError) {
+        logger.debug('Multi-session approach failed', {
+          component: 'SessionValidation',
+          path: pathname,
+          error:
+            multiSessionError instanceof Error
+              ? multiSessionError.message
+              : String(multiSessionError),
+        });
+      }
     }
+
+    return null;
+  } catch (error) {
+    logger.error(
+      'Session validation error',
+      {
+        path: req.nextUrl.pathname,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      error
+    );
     return null;
   }
 }
