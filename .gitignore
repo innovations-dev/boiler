@@ -44,6 +44,8 @@ next-env.d.ts
 
 # db
 local.db
+local.db-wal
+local.db-shm
 dev.db
 prod.db
 file.db
