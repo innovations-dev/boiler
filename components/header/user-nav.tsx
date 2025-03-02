@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { navigationRoutes } from '@/config/routes.config';
@@ -20,12 +20,10 @@ function UserNavContent({
   authenticated: typeof navigationRoutes.admin;
   unauthenticated: typeof navigationRoutes.admin;
 }) {
-  const router = useRouter();
-  const { isPending, error, data } = authClient.useSession();
+  const { isPending, error, data: session } = authClient.useSession();
   const pathname = usePathname();
 
-  const items = data?.session ? authenticated : unauthenticated;
-  console.log('🚀 ~ userNavContent ~ items:', items);
+  const items = session ? authenticated : unauthenticated;
 
   if (isPending) {
     return <Spinner />;
@@ -43,7 +41,7 @@ function UserNavContent({
     return <div>Error</div>;
   }
 
-  if (!error && data?.session && data?.user) {
+  if (!error && session?.session && session?.user) {
     const handleSignOut = async () => {
       try {
         await authClient.signOut();
