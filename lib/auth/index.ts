@@ -1,16 +1,17 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { nextCookies } from 'better-auth/next-js';
+import { customSession } from 'better-auth/plugins';
 
 import { databaseHooks } from './database-hooks';
-import { betterAuthOptions } from './options';
-import { betterAuthPlugins, githubConfig, providers } from './providers';
+import { betterAuthPlugins } from './plugins';
+import { customSession as customSessionConfig } from './plugins/custom-session';
+import { githubConfig, providers } from './providers';
+import { settings } from './settings';
 
 const enabledProviders = ['password', 'github'];
 
 export const auth = betterAuth({
-  ...betterAuthOptions,
-  plugins: [...(betterAuthPlugins ?? []), nextCookies()],
-  databaseHooks, // Used for session + org management
+  ...settings,
   emailAndPassword: {
     enabled: enabledProviders.includes('password'),
     ...(enabledProviders.includes('password')
@@ -27,4 +28,10 @@ export const auth = betterAuth({
         github: githubConfig,
       }
     : {},
+  databaseHooks, // Used for session + org management
+  plugins: [
+    ...(betterAuthPlugins ?? []),
+    customSession(customSessionConfig, settings),
+    nextCookies(),
+  ],
 } satisfies BetterAuthOptions);

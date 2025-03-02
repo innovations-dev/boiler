@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Session } from 'better-auth';
 
 import { auth } from '@/lib/auth';
-import { authClient } from '@/lib/auth/client';
-import { debugSession } from '@/lib/auth/debug-session';
 import { logger } from '@/lib/logger';
 
 // Define a type for our custom session data
-interface CustomSessionData {
-  session: {
-    id: string;
-    userId: string;
-    expiresAt: Date;
-    [key: string]: any;
-  };
-  user: {
-    id: string;
-    email: string;
-    [key: string]: any;
-  };
-  activeOrganizationId?: string | null;
-  [key: string]: any;
-}
 
 /**
  * API endpoint for debugging session state
@@ -160,7 +144,7 @@ export async function GET(req: NextRequest) {
             email: session.user.email,
             sessionId: session.session?.id,
             expiresAt: session.session?.expiresAt,
-            activeOrganizationId: session.activeOrganizationId,
+            activeOrganizationId: session.session?.activeOrganizationId,
           };
 
           logger.info('Session retrieved successfully with auth.api', {

@@ -1,4 +1,4 @@
-import { type BetterAuthOptions, type Session } from 'better-auth';
+import type { BetterAuthOptions, Session } from 'better-auth';
 import { UserWithRole } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 
@@ -13,9 +13,8 @@ import { logger } from '@/lib/logger';
 export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
   session: {
     create: {
-      after: async (betterAuthSession: Omit<Session, 'user'>) => {
-        if (betterAuthSession.activeOrganizationId) return;
-
+      after: async (betterAuthSession: Session) => {
+        if (betterAuthSession?.activeOrganizationId) return;
         try {
           // Check if the user has an existing organization through membership
           const existingMember = await db.query.member.findFirst({
