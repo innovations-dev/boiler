@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { updateOrganizationSettingsAction } from '@/app/_actions/organizations';
 import { ImageUpload } from '@/components/image-upload';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,19 +16,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useServerAction } from '@/hooks/actions/use-server-action';
+import { Organization } from '@/lib/better-auth/organization';
 import {
-  Organization,
   organizationSettingsSchema,
   type OrganizationSettings,
 } from '@/lib/db/_schema';
+import { useUpdateOrganization } from '@/lib/hooks/organizations/use-better-auth-organization';
 
 interface OrganizationFormProps {
-  organization: Omit<Organization, 'slug'> & {
-    slug: string | null;
-    logo?: string | null;
-    metadata?: string | null;
-  };
+  organization: Organization;
 }
 
 export function OrganizationForm({ organization }: OrganizationFormProps) {
@@ -48,24 +43,30 @@ export function OrganizationForm({ organization }: OrganizationFormProps) {
     } as OrganizationSettings,
   });
 
-  const { execute, isPending } = useServerAction({
-    action: (data: OrganizationSettings) => {
-      console.log('Submitting organization form with data:', data);
-      return updateOrganizationSettingsAction(organization.slug || '', data);
-    },
-    onSuccess: () => {
+  const updateOrganization = useUpdateOrganization();
+
+  const onSubmit = async (data: OrganizationSettings) => {
+    console.log('Submitting organization form with data:', data);
+
+    try {
+      await updateOrganization.mutateAsync({
+        id: organization.id,
+        name: data.name,
+        slug: data.slug,
+        logo: data.logo || undefined,
+      });
+
       console.log('Organization settings updated successfully');
       toast.success('Organization settings updated');
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error('Error updating organization settings:', error);
       toast.error('Failed to update organization settings');
-    },
-  });
+    }
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(execute)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
           control={form.control}
           name="name"
@@ -105,7 +106,7 @@ export function OrganizationForm({ organization }: OrganizationFormProps) {
                   value={field.value}
                   onChangeAction={(value) => field.onChange(value)}
                   onRemoveAction={() => field.onChange(null)}
-                  disabled={isPending}
+                  disabled={updateOrganization.isPending}
                 />
               </FormControl>
               <FormMessage />
@@ -113,8 +114,8 @@ export function OrganizationForm({ organization }: OrganizationFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Saving...' : 'Save Changes'}
+        <Button type="submit" disabled={updateOrganization.isPending}>
+          {updateOrganization.isPending ? 'Saving...' : 'Save Changes'}
         </Button>
       </form>
     </Form>
