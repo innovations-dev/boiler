@@ -25,41 +25,182 @@ import { getBaseUrl, slugify } from '@/lib/utils';
 type OrganizationSettings = z.infer<typeof organizationSettingsSchema>;
 
 /**
+ * Retrieves an organization by its ID.
+ *
  * @deprecated Use organizationService.getFullOrganization from lib/better-auth/organization.ts instead.
  * This function will be removed in a future release.
+ *
+ * @param id - The ID of the organization to retrieve
+ * @returns A promise that resolves to the organization or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * // Get an organization by ID
+ * const organization = await getOrganization('org-123');
+ * if (organization) {
+ *   console.log(`Found organization: ${organization.name}`);
+ * }
+ * ```
+ *
+ * @remarks
+ * This function is deprecated in favor of using the Better-Auth client.
+ * It currently attempts to use the Better-Auth client internally but maintains the same
+ * interface for backward compatibility. In the future, this function will be
+ * removed entirely, and all code should use organizationService.getFullOrganization directly.
  */
 export async function getOrganization(
   id: string
 ): Promise<Organization | undefined> {
-  return db.query.organization.findFirst({
-    where: eq(organization.id, id),
-    with: {
-      members: {
+  try {
+    logger.debug('Getting organization', { id });
+
+    // First, try to get the organization slug from the ID
+    const org = await db
+      .select({ slug: organization.slug })
+      .from(organization)
+      .where(eq(organization.id, id))
+      .limit(1);
+
+    if (!org.length || !org[0].slug) {
+      logger.debug('Organization not found or has no slug', { id });
+      // Fall back to direct database query
+      return db.query.organization.findFirst({
+        where: eq(organization.id, id),
         with: {
-          user: true,
+          members: {
+            with: {
+              user: true,
+            },
+          },
         },
-      },
-    },
-  });
+      });
+    }
+
+    // Use Better-Auth client to get the organization
+    try {
+      const result = await organizationService.getFullOrganization(org[0].slug);
+
+      // Convert the Better-Auth organization format to our internal format
+      const convertedOrg = {
+        ...result,
+        // Convert string dates to Date objects
+        createdAt: new Date(result.createdAt),
+        updatedAt: new Date(result.updatedAt),
+        // Ensure metadata is a string or null
+        metadata: result.metadata ? JSON.stringify(result.metadata) : null,
+        // Convert members if they exist
+        members:
+          result.members?.map((member) => ({
+            ...member,
+            createdAt: new Date(member.createdAt),
+            updatedAt: new Date(member.updatedAt),
+          })) || [],
+      };
+
+      return convertedOrg as unknown as Organization;
+    } catch (betterAuthError) {
+      // Handle Better-Auth errors
+      logger.error('Better-Auth error getting organization', {
+        id,
+        error: betterAuthError as Record<string, unknown>,
+      });
+
+      // Fall back to direct database query if Better-Auth fails
+      logger.warn('Falling back to direct database query', { id });
+
+      return db.query.organization.findFirst({
+        where: eq(organization.id, id),
+        with: {
+          members: {
+            with: {
+              user: true,
+            },
+          },
+        },
+      });
+    }
+  } catch (error) {
+    logger.error('Failed to get organization', {
+      id,
+      error: error as Record<string, unknown>,
+    });
+    handleBetterFetchError(error);
+    return undefined;
+  }
 }
 
 /**
+ * Retrieves all organizations for a specific user.
+ *
  * @deprecated Use organizationService.list from lib/better-auth/organization.ts instead.
  * This function will be removed in a future release.
+ *
+ * @param userId - The ID of the user to get organizations for
+ * @returns A promise that resolves to an array of organizations
+ *
+ * @example
+ * ```typescript
+ * // Get all organizations for a user
+ * const organizations = await getUserOrganizations('user-123');
+ * console.log(`User has ${organizations.length} organizations`);
+ * ```
+ *
+ * @remarks
+ * This function is deprecated in favor of using the Better-Auth client.
+ * It currently uses the Better-Auth client internally but maintains the same
+ * interface for backward compatibility. In the future, this function will be
+ * removed entirely, and all code should use organizationService.list directly.
  */
 export async function getUserOrganizations(
   userId: string
 ): Promise<Organization[]> {
-  return db.query.organization.findMany({
-    with: {
-      members: {
-        where: eq(member.userId, userId),
+  try {
+    logger.debug('Getting user organizations', { userId });
+
+    // Use Better-Auth client to get organizations
+    try {
+      const result = await organizationService.list();
+
+      // Convert the Better-Auth organization format to our internal format
+      const convertedOrgs = result.map((org) => ({
+        ...org,
+        // Convert string dates to Date objects
+        createdAt: new Date(org.createdAt),
+        updatedAt: new Date(org.updatedAt),
+        // Ensure metadata is a string or null
+        metadata: org.metadata ? JSON.stringify(org.metadata) : null,
+      }));
+
+      return convertedOrgs as unknown as Organization[];
+    } catch (betterAuthError) {
+      // Handle Better-Auth errors
+      logger.error('Better-Auth error getting user organizations', {
+        userId,
+        error: betterAuthError as Record<string, unknown>,
+      });
+
+      // Fall back to direct database query if Better-Auth fails
+      logger.warn('Falling back to direct database query', { userId });
+
+      return db.query.organization.findMany({
         with: {
-          user: true,
+          members: {
+            where: eq(member.userId, userId),
+            with: {
+              user: true,
+            },
+          },
         },
-      },
-    },
-  });
+      });
+    }
+  } catch (error) {
+    logger.error('Failed to get user organizations', {
+      userId,
+      error: error as Record<string, unknown>,
+    });
+    handleBetterFetchError(error);
+    return [];
+  }
 }
 
 /**
@@ -479,27 +620,83 @@ export async function createPersonalOrganization(userId: string) {
 }
 
 /**
+ * Retrieves the active organization for a user.
+ *
  * @deprecated Use organizationService.getActiveMember from lib/better-auth/organization.ts instead.
  * This function will be removed in a future release.
+ *
+ * @param userId - The ID of the user to get the active organization for
+ * @returns A promise that resolves to the active organization member or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * // Get the active organization for a user
+ * const activeMember = await getActiveOrganization('user-123');
+ * if (activeMember) {
+ *   console.log(`Active organization: ${activeMember.organization.name}`);
+ * }
+ * ```
+ *
+ * @remarks
+ * This function is deprecated in favor of using the Better-Auth client.
+ * It currently falls back to direct database queries as the Better-Auth client
+ * requires an organization ID, which we don't have at this point.
+ * In the future, this function will be removed entirely, and all code should
+ * use organizationService.getActiveMember directly with the appropriate organization ID.
  */
 export async function getActiveOrganization(userId: string) {
-  return db.query.member.findFirst({
-    where: eq(member.userId, userId),
-    with: {
-      organization: true,
-      // TODO: implement workspaces
-      // organization: {
-      //   with: {
-      //     workspaces: true,
-      //   },
-      // },
-    },
-  });
+  try {
+    logger.debug('Getting active organization', { userId });
+
+    // We need to use direct database query here because Better-Auth's getActiveMember
+    // requires an organization ID, which we don't have at this point
+    return db.query.member.findFirst({
+      where: eq(member.userId, userId),
+      with: {
+        organization: true,
+        // TODO: implement workspaces
+        // organization: {
+        //   with: {
+        //     workspaces: true,
+        //   },
+        // },
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to get active organization', {
+      userId,
+      error: error as Record<string, unknown>,
+    });
+    handleBetterFetchError(error);
+    return undefined;
+  }
 }
 
 /**
+ * Updates an organization's settings.
+ *
  * @deprecated Use organizationService.update from lib/better-auth/organization.ts instead.
  * This function will be removed in a future release.
+ *
+ * @param slug - The slug of the organization to update
+ * @param data - The organization settings data to update
+ * @returns The updated organization
+ *
+ * @example
+ * ```typescript
+ * // Update organization settings
+ * const updatedOrg = await updateOrganizationSettings('my-org', {
+ *   name: 'My Updated Organization',
+ *   slug: 'my-updated-org',
+ *   logo: 'https://example.com/logo.png'
+ * });
+ * ```
+ *
+ * @remarks
+ * This function is deprecated in favor of using the Better-Auth client.
+ * It currently uses the Better-Auth client internally but maintains the same
+ * interface for backward compatibility. In the future, this function will be
+ * removed entirely, and all code should use organizationService.update directly.
  */
 export async function updateOrganizationSettings(
   slug: string,
@@ -512,25 +709,61 @@ export async function updateOrganizationSettings(
     const validatedData = organizationSettingsSchema.parse(data);
     logger.debug('Validated organization settings data', validatedData);
 
-    // Update organization
-    const updatedOrg = await db
-      .update(organization)
-      .set({
-        name: validatedData.name,
-        slug: validatedData.slug,
-        logo: validatedData.logo,
-        updatedAt: new Date(),
-      })
+    // Get organization ID from slug
+    const org = await db
+      .select()
+      .from(organization)
       .where(eq(organization.slug, slug))
-      .returning();
+      .limit(1);
 
-    if (!updatedOrg.length) {
+    if (!org.length) {
       throw new Error(`Organization with slug ${slug} not found`);
     }
 
-    return updatedOrg[0];
+    const orgId = org[0].id;
+
+    // Use Better-Auth client to update the organization
+    try {
+      const result = await organizationService.update({
+        id: orgId,
+        name: validatedData.name,
+        slug: validatedData.slug,
+        logo: validatedData.logo || undefined,
+      });
+
+      return result;
+    } catch (betterAuthError) {
+      // Handle Better-Auth errors
+      logger.error('Better-Auth error updating organization settings', {
+        slug,
+        error: betterAuthError as Record<string, unknown>,
+      });
+
+      // Fall back to direct database update if Better-Auth fails
+      logger.warn('Falling back to direct database update', { slug });
+
+      const updatedOrg = await db
+        .update(organization)
+        .set({
+          name: validatedData.name,
+          slug: validatedData.slug,
+          logo: validatedData.logo,
+          updatedAt: new Date(),
+        })
+        .where(eq(organization.slug, slug))
+        .returning();
+
+      if (!updatedOrg.length) {
+        throw new Error(`Organization with slug ${slug} not found`);
+      }
+
+      return updatedOrg[0];
+    }
   } catch (error) {
-    logger.error('Failed to update organization settings', { slug, error });
-    handleUnknownError(error);
+    logger.error('Failed to update organization settings', {
+      slug,
+      error: error as Record<string, unknown>,
+    });
+    handleBetterFetchError(error);
   }
 }
