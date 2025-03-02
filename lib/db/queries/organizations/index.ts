@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/_schema';
 import { member, organization, session } from '@/lib/db/schema';
 import { handleUnknownError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { getBaseUrl, slugify } from '@/lib/utils';
 
 // Define the OrganizationSettings type from the schema
@@ -228,8 +229,11 @@ export async function updateOrganizationSettings(
   data: OrganizationSettings
 ) {
   try {
+    logger.debug('Updating organization settings', { slug, data });
+
     // Validate input
     const validatedData = organizationSettingsSchema.parse(data);
+    logger.debug('Validated organization settings data', validatedData);
 
     // Update organization
     const updatedOrg = await db
@@ -243,9 +247,19 @@ export async function updateOrganizationSettings(
       .where(eq(organization.slug, slug))
       .returning();
 
+    logger.debug('Organization updated', {
+      success: updatedOrg.length > 0,
+      updatedId: updatedOrg[0]?.id,
+      updatedSlug: updatedOrg[0]?.slug,
+    });
+
     return { success: true, data: updatedOrg[0] };
   } catch (error) {
     // Handle errors
+    logger.error('Error updating organization settings', {
+      slug,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return handleUnknownError(error);
   }
 }

@@ -26,13 +26,13 @@ export function useActiveSessions(slug: string) {
   return useQuery({
     queryKey: queryKeys.organizations.metrics.activeSessions(slug),
     queryFn: () => fetchActiveSessions(slug),
-    // Refresh every 30 seconds
-    refetchInterval: 30 * 1000,
+    // Refresh every 60 seconds
+    refetchInterval: 60 * 1000,
     // Don't refetch in background
     refetchIntervalInBackground: false,
     // Still use window focus refetch
     refetchOnWindowFocus: true,
-    // Keep data fresh for 15 seconds
-    staleTime: 15 * 1000,
+    // Keep data fresh for 30 seconds
+    staleTime: 30 * 1000,
   });
 }

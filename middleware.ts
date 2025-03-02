@@ -14,10 +14,6 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
-    pathname === '/api/auth-inspect' ||
-    pathname === '/api/auth-test' ||
-    pathname === '/api/auth-debug' ||
-    pathname === '/api/webhooks' ||
     pathname === '/sign-in' ||
     pathname === '/sign-up' ||
     pathname === '/reset-password' ||
@@ -25,6 +21,7 @@ export async function middleware(request: NextRequest) {
     pathname === '/debug-session' ||
     pathname.startsWith('/static')
   ) {
+    logger.debug('Middleware skipping public route', { pathname });
     return NextResponse.next();
   }
 
@@ -34,8 +31,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/organizations')
   ) {
     try {
-      // Use Better-Auth's native session validation
-      // @ts-ignore - Better-Auth types are not up to date
+      logger.debug('Middleware checking protected route', { pathname });
+
       const session = await auth.api.getSession({
         headers: request.headers,
         query: {
@@ -56,6 +53,12 @@ export async function middleware(request: NextRequest) {
 
         // Handle API routes
         if (pathname.startsWith('/api/')) {
+          logger.debug(
+            'Middleware redirecting from API route due to no session',
+            {
+              pathname,
+            }
+          );
           return NextResponse.json(
             { message: 'Authentication required' },
             { status: 401 }
@@ -66,6 +69,10 @@ export async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = '/sign-in';
         url.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
+        logger.debug('Middleware redirecting to sign-in due to no session', {
+          pathname,
+          redirectTo: url.pathname + url.search,
+        });
         return NextResponse.redirect(url);
       }
 
@@ -81,6 +88,7 @@ export async function middleware(request: NextRequest) {
           orgLogger.debug('Processing organization route in middleware', {
             path: pathname,
             userId: session.user.id,
+            organizationSlug,
           });
 
           // Add organization context headers
@@ -88,8 +96,17 @@ export async function middleware(request: NextRequest) {
           requestHeaders.set('x-organization-slug', organizationSlug);
           requestHeaders.set('x-user-id', session.user.id);
 
+          logger.debug('Middleware added organization headers', {
+            organizationSlug,
+            userId: session.user.id,
+          });
+
           return NextResponse.next({
             request: { headers: requestHeaders },
+          });
+        } else {
+          logger.debug('Middleware could not extract organization slug', {
+            pathname,
           });
         }
       }
@@ -98,6 +115,11 @@ export async function middleware(request: NextRequest) {
       const requestHeaders = new Headers(request.headers);
       requestHeaders.set('x-user-id', session.user.id);
 
+      logger.debug('Middleware added user ID header for protected route', {
+        pathname,
+        userId: session.user.id,
+      });
+
       return NextResponse.next({
         request: { headers: requestHeaders },
       });
@@ -105,10 +127,14 @@ export async function middleware(request: NextRequest) {
       logger.error('Middleware error', {
         pathname,
         error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       // Handle API routes
       if (pathname.startsWith('/api/')) {
+        logger.debug('Middleware redirecting API route due to error', {
+          pathname,
+        });
         return NextResponse.json(
           { message: 'Authentication error' },
           { status: 500 }
@@ -119,10 +145,15 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/sign-in';
       url.searchParams.set('error', 'session_error');
+      logger.debug('Middleware redirecting to sign-in due to error', {
+        pathname,
+        redirectTo: url.pathname + url.search,
+      });
       return NextResponse.redirect(url);
     }
   }
 
+  logger.debug('Middleware passing through request', { pathname });
   return NextResponse.next();
 }
 

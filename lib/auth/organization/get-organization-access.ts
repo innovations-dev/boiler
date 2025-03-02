@@ -29,20 +29,36 @@ export async function getOrganizationAccess(organizationSlug: string) {
   const orgLogger = withOrganizationContext(organizationSlug);
 
   try {
-    orgLogger.debug('Checking organization access');
+    orgLogger.debug('Starting organization access check', {
+      organizationSlug,
+      timestamp: new Date().toISOString(),
+    });
 
     // Get session from cookies
-    const session = await auth.api.getSession({ headers: await headers() });
+    const headersList = await headers();
+    orgLogger.debug('Headers received for access check', {
+      headerKeys: Array.from(headersList.keys()),
+      hasCookie: headersList.has('cookie'),
+    });
 
-    orgLogger.debug('getOrganizationAccess ~ session:', { session });
+    const session = await auth.api.getSession({ headers: headersList });
+
+    orgLogger.debug('getOrganizationAccess ~ session result:', {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+    });
 
     if (!session?.user) {
-      orgLogger.debug('No valid session for organization access check');
+      orgLogger.debug('No valid session for organization access check', {
+        organizationSlug,
+      });
       return { hasAccess: false, session: null };
     }
 
     orgLogger.debug('Session found, checking organization membership', {
       userId: session.user.id,
+      organizationSlug,
     });
 
     // Check organization access
@@ -54,17 +70,21 @@ export async function getOrganizationAccess(organizationSlug: string) {
     if (hasAccess) {
       orgLogger.debug('User has access to organization', {
         userId: session.user.id,
+        organizationSlug,
       });
     } else {
       orgLogger.debug('User does not have access to organization', {
         userId: session.user.id,
+        organizationSlug,
       });
     }
 
     return { hasAccess, session } as const;
   } catch (error) {
     orgLogger.error('Error checking organization access', {
-      error,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      organizationSlug,
     });
     return { hasAccess: false, session: null };
   }

@@ -22,12 +22,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const orgLogger = withOrganizationContext(params.slug);
+  // Ensure params is awaited
+  const { slug } = await params;
+  const orgLogger = withOrganizationContext(slug);
 
   try {
     orgLogger.debug('Fetching organization metrics');
 
-    const { hasAccess, session } = await getOrganizationAccess(params.slug);
+    const { hasAccess, session } = await getOrganizationAccess(slug);
 
     if (!session) {
       orgLogger.warn('Unauthenticated metrics access attempt');
@@ -47,7 +49,6 @@ export async function GET(
       );
     }
 
-    const { slug } = params;
     const userId = request.headers.get('x-user-id');
     const sessionId = request.headers.get('x-session-id');
 
@@ -59,7 +60,7 @@ export async function GET(
     }
 
     const org = await db.query.organization.findFirst({
-      where: eq(organization.slug, slug!),
+      where: eq(organization.slug, slug),
       with: {
         members: {
           where: eq(member.userId, userId),

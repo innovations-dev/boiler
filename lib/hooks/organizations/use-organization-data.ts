@@ -81,6 +81,8 @@ export function useOrganizationMetrics(slug: string) {
   return useQuery({
     queryKey: queryKeys.organizations.metrics.all(slug),
     queryFn: () => fetchOrganizationMetrics(slug),
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 60000 * 5, // Reduce polling frequency to once per minute
+    refetchIntervalInBackground: false, // Don't refetch in background
+    staleTime: 30000 * 2, // Data stays fresh for 30 seconds
   });
 }

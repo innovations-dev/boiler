@@ -3,6 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import { updateOrganizationSettingsAction } from '@/app/_actions/organizations';
 import { ImageUpload } from '@/components/image-upload';
@@ -21,7 +22,7 @@ import {
   Organization,
   organizationSettingsSchema,
   type OrganizationSettings,
-} from '@/lib/types/organization';
+} from '@/lib/db/_schema';
 
 interface OrganizationFormProps {
   organization: Omit<Organization, 'slug'> & {
@@ -32,23 +33,33 @@ interface OrganizationFormProps {
 }
 
 export function OrganizationForm({ organization }: OrganizationFormProps) {
+  console.log('Organization form initialized with:', {
+    id: organization.id,
+    name: organization.name,
+    slug: organization.slug,
+  });
+
   const form = useForm<OrganizationSettings>({
     resolver: zodResolver(organizationSettingsSchema),
     defaultValues: {
       name: organization.name,
       slug: organization.slug || '',
       logo: organization.logo || null,
-    },
+    } as OrganizationSettings,
   });
 
   const { execute, isPending } = useServerAction({
-    action: (data: OrganizationSettings) =>
-      updateOrganizationSettingsAction(organization.slug || '', data),
-    onSuccess: () => {
-      // Show success message
+    action: (data: OrganizationSettings) => {
+      console.log('Submitting organization form with data:', data);
+      return updateOrganizationSettingsAction(organization.slug || '', data);
     },
-    onError: () => {
-      // Show error message
+    onSuccess: () => {
+      console.log('Organization settings updated successfully');
+      toast.success('Organization settings updated');
+    },
+    onError: (error) => {
+      console.error('Error updating organization settings:', error);
+      toast.error('Failed to update organization settings');
     },
   });
 
