@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { createAction } from '@/lib/actions/create-action';
+import { organizationService } from '@/lib/better-auth/organization';
 import {
   createOrganizationSchema,
   organizationSettingsSchema,
@@ -17,6 +18,7 @@ import {
   updateOrganization,
   updateOrganizationSettings,
 } from '@/lib/db/queries/organizations';
+import { logger } from '@/lib/logger';
 
 // Simple input schemas
 const getOrganizationInputSchema = z.string();
@@ -35,6 +37,10 @@ const actionSessionSchema = z.object({
   organizationId: z.string(),
 });
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function createOrganizationAction(input: {
   name: string;
   slug?: string;
@@ -49,7 +55,42 @@ export async function createOrganizationAction(input: {
     }),
     handler: async () => {
       try {
-        const result = await createOrganization(input);
+        // Use the Better-Auth client instead of the custom implementation
+        logger.debug('Creating organization using Better-Auth client', {
+          name: input.name,
+          slug: input.slug,
+        });
+
+        // Parse metadata safely if it exists
+        let parsedMetadata: Record<string, unknown> | undefined = undefined;
+        if (input.metadata) {
+          try {
+            const parsed = JSON.parse(input.metadata);
+            if (
+              parsed &&
+              typeof parsed === 'object' &&
+              !Array.isArray(parsed)
+            ) {
+              parsedMetadata = parsed as Record<string, unknown>;
+            } else {
+              logger.warn('Metadata is not a valid object, ignoring', {
+                metadata: input.metadata,
+              });
+            }
+          } catch (parseError) {
+            logger.error(
+              'Failed to parse metadata JSON',
+              parseError as Record<string, unknown>
+            );
+          }
+        }
+
+        const result = await organizationService.create({
+          name: input.name,
+          slug: input.slug,
+          logo: input.logo,
+          metadata: parsedMetadata,
+        });
 
         // Ensure the result is valid before returning
         if (!result) {
@@ -57,9 +98,12 @@ export async function createOrganizationAction(input: {
         }
 
         // The result will be validated by the organizationSchema in the hook
-        return result;
+        return { data: result };
       } catch (error) {
-        console.error('Error in createOrganizationAction:', error);
+        logger.error(
+          'Error in createOrganizationAction:',
+          error as Record<string, unknown>
+        );
         // Re-throw the error to be handled by the createAction wrapper
         throw error;
       }
@@ -69,6 +113,10 @@ export async function createOrganizationAction(input: {
   });
 }
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function getOrganizationAction(id: string) {
   return createAction({
     schema: getOrganizationInputSchema,
@@ -78,15 +126,38 @@ export async function getOrganizationAction(id: string) {
   });
 }
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function getUserOrganizationsAction(userId: string) {
   return createAction({
     schema: getUserOrganizationsInputSchema,
-    handler: () => getUserOrganizations(userId),
+    handler: async () => {
+      try {
+        // Use the Better-Auth client instead of the custom implementation
+        logger.debug('Getting user organizations using Better-Auth client');
+
+        const result = await organizationService.list();
+
+        return { data: result };
+      } catch (error) {
+        logger.error(
+          'Error in getUserOrganizationsAction:',
+          error as Record<string, unknown>
+        );
+        throw error;
+      }
+    },
     input: userId,
     context: 'getUserOrganizations',
   });
 }
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function updateOrganizationAction(
   id: string,
   input: z.infer<typeof updateOrganizationSchema>
@@ -99,6 +170,10 @@ export async function updateOrganizationAction(
   });
 }
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function addMemberToOrganizationAction(input: {
   organizationId: string;
   userId: string;
@@ -112,18 +187,43 @@ export async function addMemberToOrganizationAction(input: {
   });
 }
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function setActiveOrganizationAction(input: {
   sessionId: string;
   organizationId: string;
 }) {
   return createAction({
     schema: actionSessionSchema,
-    handler: () => setActiveOrganization(input),
+    handler: async () => {
+      try {
+        // Use the Better-Auth client instead of the custom implementation
+        logger.debug('Setting active organization using Better-Auth client', {
+          organizationId: input.organizationId,
+        });
+
+        await organizationService.setActive(input.organizationId);
+
+        return { success: true };
+      } catch (error) {
+        logger.error(
+          'Error in setActiveOrganizationAction:',
+          error as Record<string, unknown>
+        );
+        throw error;
+      }
+    },
     input,
     context: 'setActiveOrganization',
   });
 }
 
+/**
+ * @deprecated Use the Better-Auth client from lib/better-auth/organization.ts instead.
+ * This action will be removed in a future release.
+ */
 export async function updateOrganizationSettingsAction(
   slug: string,
   input: z.infer<typeof organizationSettingsSchema>

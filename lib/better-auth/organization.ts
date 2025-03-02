@@ -5,7 +5,7 @@
  * It handles authentication, error handling, and response parsing.
  */
 
-import { betterAuthClient, handleBetterAuthError } from './client';
+import { betterAuthClient, handleBetterFetchError } from './client';
 
 // Organization types
 export interface Organization {
@@ -66,7 +66,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!;
@@ -88,7 +88,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!;
@@ -103,7 +103,7 @@ export const organizationService = {
     });
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -117,7 +117,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -130,7 +130,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!;
@@ -144,7 +144,7 @@ export const organizationService = {
       await betterAuthClient.get<Organization[]>('/organization/list');
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data || [];
@@ -164,7 +164,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!;
@@ -180,7 +180,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -194,7 +194,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -207,7 +207,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!;
@@ -223,7 +223,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -237,7 +237,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!.available;
@@ -256,7 +256,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -274,7 +274,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -289,7 +289,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!;
@@ -304,7 +304,7 @@ export const organizationService = {
     });
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
   },
 
@@ -321,7 +321,7 @@ export const organizationService = {
     );
 
     if (!response.success) {
-      handleBetterAuthError(response);
+      handleBetterFetchError(response);
     }
 
     return response.data!.hasPermission;

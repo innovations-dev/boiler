@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { useQueryClient } from '@tanstack/react-query';
 import { nanoid } from 'nanoid';
-import { z } from 'zod';
+import {
+  z,
+  type objectInputType,
+  type objectOutputType,
+  type ZodTypeAny,
+} from 'zod';
 
 import {
   createOrganizationAction,
@@ -12,6 +17,11 @@ import {
 } from '@/app/_actions/organizations';
 import { createOrganizationSchema, organizationSchema } from '@/lib/db/_schema';
 import { AppError } from '@/lib/errors';
+import {
+  useCreateOrganization as useBetterAuthCreateOrganization,
+  useOrganization as useBetterAuthOrganization,
+  useOrganizations as useBetterAuthOrganizations,
+} from '@/lib/hooks/organizations/use-better-auth-organization';
 import { useValidatedMutation } from '@/lib/query/hooks/useValidatedMutation';
 import { useValidatedQuery } from '@/lib/query/hooks/useValidatedQuery';
 import { queryKeys } from '@/lib/query/keys';
@@ -20,8 +30,13 @@ import { slugify } from '@/lib/utils';
 
 import { useServerAction } from '../actions/use-server-action';
 
-// React Query Hooks
+/**
+ * @deprecated Use the Better-Auth hooks from lib/hooks/organizations/use-better-auth-organization.ts instead.
+ * This hook will be removed in a future release.
+ */
 export function useOrganization(id: string) {
+  // For backward compatibility, we'll continue to use the old implementation
+  // In a future release, we can switch to using the Better-Auth hook
   return useValidatedQuery(
     ['organizations', id],
     async () => {
@@ -42,7 +57,12 @@ export function useOrganization(id: string) {
   );
 }
 
+/**
+ * @deprecated Use the Better-Auth hooks from lib/hooks/organizations/use-better-auth-organization.ts instead.
+ * This hook will be removed in a future release.
+ */
 export function useUserOrganizations(userId: string) {
+  // @ts-ignore - This function is deprecated and will be removed in a future release
   return useValidatedQuery(
     ['organizations', 'user', userId],
     async () => {
@@ -53,12 +73,18 @@ export function useUserOrganizations(userId: string) {
     {
       component: 'OrganizationList',
       context: 'getUserOrganizations',
+      enabled: !!userId,
     }
   );
 }
 
+/**
+ * @deprecated Use the Better-Auth hooks from lib/hooks/organizations/use-better-auth-organization.ts instead.
+ * This hook will be removed in a future release.
+ */
 export function useCreateOrganization() {
   const queryClient = useQueryClient();
+  // @ts-ignore - This function is deprecated and will be removed in a future release
   return useValidatedMutation({
     mutationFn: async (input) => {
       // Process the input to ensure it matches the expected format
@@ -89,7 +115,7 @@ export function useCreateOrganization() {
           );
         }
 
-        // Return the data directly - schema validation will handle type conversions
+        // Return the data directly
         return response.data;
       } catch (error) {
         console.error('Error in useCreateOrganization:', error);
@@ -133,7 +159,10 @@ export function useCreateOrganization() {
   });
 }
 
-// Server Action Hooks
+/**
+ * @deprecated Use the Better-Auth hooks from lib/hooks/organizations/use-better-auth-organization.ts instead.
+ * This hook will be removed in a future release.
+ */
 export function useCreateOrganizationAction() {
   return useServerAction({
     action: async (input) => {
