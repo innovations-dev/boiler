@@ -6,14 +6,13 @@
  */
 import { createContext, useCallback, useContext, useMemo } from 'react';
 
-import { AppError } from '@/lib/errors';
+import { Organization, OrganizationRole } from '@/lib/db/_schema';
 import {
+  OrganizationMember,
+  OrganizationPermission,
   ROLE_PERMISSIONS,
-  type Organization,
-  type OrganizationMember,
-  type OrganizationPermission,
-  type OrganizationRole,
-} from '@/lib/types/organization';
+} from '@/lib/db/_schema/organization';
+import { AppError } from '@/lib/errors';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
 interface OrganizationContextValue {

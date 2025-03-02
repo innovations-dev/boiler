@@ -3,6 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { getOrganizationAccess } from '@/lib/auth/organization/get-organization-access';
 import { db } from '@/lib/db';
+import { organizationMetricsSchema } from '@/lib/db/_schema/organization';
 import {
   invitation,
   member,
@@ -11,7 +12,6 @@ import {
 } from '@/lib/db/schema';
 import { AppError } from '@/lib/errors';
 import { logger, withOrganizationContext } from '@/lib/logger';
-import { organizationMetricsSchema } from '@/lib/types/organization';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
 // Define cache configuration

@@ -4,10 +4,10 @@ import { z } from 'zod';
 
 import { getOrganizationAccess } from '@/lib/auth/organization/get-organization-access';
 import { db } from '@/lib/db';
+import { organizationSchema } from '@/lib/db/_schema';
 import { member, organization } from '@/lib/db/schema';
 import { AppError } from '@/lib/errors';
-import { logger, withOrganizationContext } from '@/lib/logger';
-import { organizationSchema } from '@/lib/types/organization';
+import { withOrganizationContext } from '@/lib/logger';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
 /**

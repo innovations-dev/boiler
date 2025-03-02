@@ -79,6 +79,8 @@ export const queryKeys = {
     /** Get organization by ID
      * @param {string} id - Organization ID
      */
+    create: (userId: string, slug?: string | null) =>
+      ['organizations', 'create', userId, slug] as const,
     detail: (slug: string) => ['organizations', slug] as const,
     metrics: {
       all: (slug: string) => ['organizations', slug, 'metrics'] as const,

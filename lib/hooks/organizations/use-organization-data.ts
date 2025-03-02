@@ -5,16 +5,15 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { AppError } from '@/lib/errors';
-import { queryKeys } from '@/lib/query/keys';
+import { organizationSchema, type Organization } from '@/lib/db/_schema';
 import {
   organizationMemberSchema,
   organizationMetricsSchema,
-  organizationSchema,
-  type Organization,
   type OrganizationMember,
   type OrganizationMetrics,
-} from '@/lib/types/organization';
+} from '@/lib/db/_schema/organization';
+import { AppError } from '@/lib/errors';
+import { queryKeys } from '@/lib/query/keys';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
 async function fetchOrganization(slug: string): Promise<Organization> {

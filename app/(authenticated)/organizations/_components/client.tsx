@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import {
 } from '@/hooks/organizations/use-organization';
 import { useSession } from '@/lib/auth/client';
 import type { Organization } from '@/lib/db/_schema';
+import { slugify } from '@/lib/utils';
 
 interface OrganizationTestClientProps {
   initialOrganizations: Organization[];
@@ -21,15 +23,44 @@ export function OrganizationTestClient({
 }: OrganizationTestClientProps) {
   const { data: session } = useSession();
   const [name, setName] = useState('');
-  const { data: organizations } = useUserOrganizations(session?.user?.id ?? '');
+  const { data: organizations, isError: orgLoadError } = useUserOrganizations(
+    session?.user?.id ?? ''
+  );
   const createOrg = useCreateOrganization();
 
-  const handleCreate = () => {
-    if (!session?.user?.id) return;
-    createOrg.mutate({
-      name,
-      userId: session.user.id,
-    });
+  const handleCreate = async () => {
+    if (!session?.user?.id) {
+      toast.error('You must be logged in to create an organization');
+      return;
+    }
+
+    if (!name.trim()) {
+      toast.error('Organization name is required');
+      return;
+    }
+
+    try {
+      createOrg.mutate(
+        {
+          name,
+          slug: slugify(name),
+          userId: session.user.id,
+        },
+        {
+          onError: (error) => {
+            console.error('Failed to create organization:', error);
+            toast.error('Failed to create organization. Please try again.');
+          },
+          onSuccess: () => {
+            setName('');
+            toast.success('Organization created successfully!');
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Error creating organization:', error);
+      toast.error('An unexpected error occurred');
+    }
   };
 
   return (
@@ -43,10 +74,19 @@ export function OrganizationTestClient({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Organization Name"
+            disabled={createOrg.isPending}
           />
-          <Button onClick={handleCreate} disabled={createOrg.isPending}>
+          <Button
+            onClick={handleCreate}
+            disabled={createOrg.isPending || !name.trim()}
+          >
             {createOrg.isPending ? 'Creating...' : 'Create Organization'}
           </Button>
+          {createOrg.isError && (
+            <p className="text-sm text-red-500">
+              Error creating organization. Please try again.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -55,13 +95,27 @@ export function OrganizationTestClient({
           <CardTitle>Your Organizations</CardTitle>
         </CardHeader>
         <CardContent>
+          {orgLoadError && (
+            <p className="text-sm text-red-500 mb-4">
+              Error loading organizations. Please refresh the page.
+            </p>
+          )}
           <div className="space-y-2">
-            {(organizations ?? initialOrganizations)?.map((org) => (
-              <div key={org.id} className="p-4 border rounded">
-                <h3 className="font-medium">{org.name}</h3>
-                <p className="text-sm text-muted-foreground">ID: {org.id}</p>
-              </div>
-            ))}
+            {(organizations ?? initialOrganizations)?.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                You don't have any organizations yet.
+              </p>
+            ) : (
+              (organizations ?? initialOrganizations)?.map((org) => (
+                <div key={org.id} className="p-4 border rounded">
+                  <h3 className="font-medium">{org.name}</h3>
+                  <p className="text-sm text-muted-foreground">ID: {org.id}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Slug: {org.slug || 'N/A'}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

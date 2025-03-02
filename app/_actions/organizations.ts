@@ -4,9 +4,9 @@ import { z } from 'zod';
 
 import { createAction } from '@/lib/actions/create-action';
 import {
-  createMemberSchema,
   createOrganizationSchema,
-  setActiveOrganizationInputSchema,
+  organizationSettingsSchema,
+  updateOrganizationSchema,
 } from '@/lib/db/_schema';
 import {
   addMemberToOrganization,
@@ -17,15 +17,22 @@ import {
   updateOrganization,
   updateOrganizationSettings,
 } from '@/lib/db/queries/organizations';
-import { organizationSettingsSchema } from '@/lib/types/organization';
 
+// Simple input schemas
 const getOrganizationInputSchema = z.string();
 const getUserOrganizationsInputSchema = z.string();
 
-const updateOrganizationInputSchema = z.object({
-  name: z.string().optional(),
-  slug: z.string().optional(),
-  logo: z.string().optional(),
+// Member schema
+const actionMemberSchema = z.object({
+  organizationId: z.string(),
+  userId: z.string(),
+  role: z.enum(['ADMIN', 'MEMBER']),
+});
+
+// Session schema
+const actionSessionSchema = z.object({
+  sessionId: z.string(),
+  organizationId: z.string(),
 });
 
 export async function createOrganizationAction(input: {
@@ -33,10 +40,30 @@ export async function createOrganizationAction(input: {
   slug?: string;
   userId: string;
   logo?: string;
+  metadata?: string;
 }) {
   return createAction({
-    schema: createOrganizationSchema,
-    handler: () => createOrganization(input),
+    // Use the createOrganizationSchema extended with userId for input validation
+    schema: createOrganizationSchema.extend({
+      userId: z.string(),
+    }),
+    handler: async () => {
+      try {
+        const result = await createOrganization(input);
+
+        // Ensure the result is valid before returning
+        if (!result) {
+          throw new Error('No organization data returned from API');
+        }
+
+        // The result will be validated by the organizationSchema in the hook
+        return result;
+      } catch (error) {
+        console.error('Error in createOrganizationAction:', error);
+        // Re-throw the error to be handled by the createAction wrapper
+        throw error;
+      }
+    },
     input,
     context: 'createOrganization',
   });
@@ -62,10 +89,10 @@ export async function getUserOrganizationsAction(userId: string) {
 
 export async function updateOrganizationAction(
   id: string,
-  input: z.infer<typeof updateOrganizationInputSchema>
+  input: z.infer<typeof updateOrganizationSchema>
 ) {
   return createAction({
-    schema: updateOrganizationInputSchema,
+    schema: updateOrganizationSchema,
     handler: () => updateOrganization(id, input),
     input,
     context: 'updateOrganization',
@@ -78,7 +105,7 @@ export async function addMemberToOrganizationAction(input: {
   role: 'ADMIN' | 'MEMBER';
 }) {
   return createAction({
-    schema: createMemberSchema,
+    schema: actionMemberSchema,
     handler: () => addMemberToOrganization(input),
     input,
     context: 'addMemberToOrganization',
@@ -90,7 +117,7 @@ export async function setActiveOrganizationAction(input: {
   organizationId: string;
 }) {
   return createAction({
-    schema: setActiveOrganizationInputSchema,
+    schema: actionSessionSchema,
     handler: () => setActiveOrganization(input),
     input,
     context: 'setActiveOrganization',

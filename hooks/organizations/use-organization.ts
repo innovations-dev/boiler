@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { useQueryClient } from '@tanstack/react-query';
+import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
 import {
@@ -13,7 +14,9 @@ import { createOrganizationSchema, organizationSchema } from '@/lib/db/_schema';
 import { AppError } from '@/lib/errors';
 import { useValidatedMutation } from '@/lib/query/hooks/useValidatedMutation';
 import { useValidatedQuery } from '@/lib/query/hooks/useValidatedQuery';
+import { queryKeys } from '@/lib/query/keys';
 import { ERROR_CODES } from '@/lib/types/responses/error';
+import { slugify } from '@/lib/utils';
 
 import { useServerAction } from '../actions/use-server-action';
 
@@ -56,18 +59,73 @@ export function useUserOrganizations(userId: string) {
 
 export function useCreateOrganization() {
   const queryClient = useQueryClient();
-
   return useValidatedMutation({
     mutationFn: async (input) => {
-      const response = await createOrganizationAction(input);
-      return response.data;
+      // Process the input to ensure it matches the expected format
+      const processedInput = {
+        name: input.name,
+        slug: input.slug || slugify(input.name),
+        userId: input.userId,
+        // Only include optional fields if they're defined and not null
+        ...(input.logo && typeof input.logo === 'string'
+          ? { logo: input.logo }
+          : {}),
+        ...(input.metadata && typeof input.metadata === 'string'
+          ? { metadata: input.metadata }
+          : {}),
+      };
+
+      try {
+        const response = await createOrganizationAction(processedInput);
+
+        // Handle case where response has no data
+        if (!response || !response.data) {
+          throw new AppError(
+            'Failed to create organization: No data returned',
+            {
+              code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+              status: 500,
+            }
+          );
+        }
+
+        // Return the data directly - schema validation will handle type conversions
+        return response.data;
+      } catch (error) {
+        console.error('Error in useCreateOrganization:', error);
+        throw new AppError(
+          error instanceof AppError
+            ? error.message
+            : 'Failed to create organization',
+          {
+            code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            status: 500,
+            cause: error,
+          }
+        );
+      }
     },
-    schema: organizationSchema,
-    variablesSchema: createOrganizationSchema.extend({ userId: z.string() }),
+    // Use the centralized schema for validation with passthrough to handle unexpected fields
+    schema: organizationSchema.passthrough(),
+    variablesSchema: createOrganizationSchema.extend({
+      userId: z.string(),
+    }),
     component: 'useCreateOrganization',
     context: `createOrganization`,
     successMessage: 'Organization created successfully',
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.create(
+          variables.userId,
+          variables.slug
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.detail(variables.slug || ''),
+      });
       queryClient.invalidateQueries({
         queryKey: ['organizations', 'user', variables.userId],
       });

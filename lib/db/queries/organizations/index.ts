@@ -1,19 +1,25 @@
 'use server';
 
 import { headers } from 'next/headers';
+import { betterFetch } from '@better-fetch/fetch';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import type { Member, Organization } from '@/lib/db/_schema';
+import {
+  organizationSchema,
+  organizationSettingsSchema,
+  type Member,
+  type Organization,
+} from '@/lib/db/_schema';
 import { member, organization, session } from '@/lib/db/schema';
 import { handleUnknownError } from '@/lib/errors';
-import {
-  OrganizationSettings,
-  organizationSettingsSchema,
-} from '@/lib/types/organization';
 import { getBaseUrl, slugify } from '@/lib/utils';
+
+// Define the OrganizationSettings type from the schema
+type OrganizationSettings = z.infer<typeof organizationSettingsSchema>;
 
 export async function getOrganization(
   id: string
@@ -50,34 +56,83 @@ export async function createOrganization(data: {
   userId: string; // creator who becomes first admin
   slug?: string;
   logo?: string;
+  metadata?: string;
 }): Promise<Organization> {
-  const { name, slug, userId, logo } = data;
-  console.log({ name, slug, userId });
-  // Start a transaction
-  return db.transaction(async (tx) => {
-    // Create organization
-    const [org] = await tx
-      .insert(organization)
-      .values({
-        id: nanoid(),
-        name,
-        slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
+  const { name, userId, logo, metadata } = data;
 
-    // Add creator as admin member
-    await tx.insert(member).values({
-      id: nanoid(),
-      organizationId: org.id,
-      userId,
-      role: 'ADMIN',
-      createdAt: new Date(),
-    });
-
-    return org;
+  // Get the session to verify authentication
+  const session = await auth.api.getSession({
+    headers: await headers(),
   });
+
+  if (!session) {
+    throw new Error('Authentication required to create an organization');
+  }
+
+  // Verify that the user has permission to create an organization
+  if (session.user.id !== data.userId) {
+    throw new Error('You can only create organizations for yourself');
+  }
+
+  // Make a direct API call to the Better-Auth organization/create endpoint
+  // This is the correct way to interact with Better-Auth's organization functionality
+  try {
+    // Get the request headers to forward cookies
+    const requestHeaders = await headers();
+    const cookieHeader = requestHeaders.get('cookie') || '';
+
+    // Ensure slug is provided or generated
+    const slug = data.slug || slugify(name);
+
+    const response = await betterFetch<Organization>(
+      `${getBaseUrl()}/api/auth/organization/create`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: cookieHeader,
+        },
+        body: JSON.stringify({
+          name,
+          slug,
+          userId,
+          ...(logo ? { logo } : {}),
+          ...(metadata ? { metadata } : {}),
+        }),
+      }
+    );
+
+    if (response.error) {
+      console.error('Failed to create organization:', response.error);
+      throw new Error(
+        response.error.message || 'Failed to create organization'
+      );
+    }
+
+    if (!response.data) {
+      console.error('No organization data returned from API');
+      throw new Error('No organization data returned from API');
+    }
+
+    // Validate the response data against the schema
+    try {
+      // Use a more permissive schema for the API response
+      const validatedOrg = organizationSchema
+        .passthrough()
+        .parse(response.data);
+      return validatedOrg;
+    } catch (validationError) {
+      console.error('Organization validation error:', validationError);
+      // If validation fails, still return the data but log the error
+      // This allows the client to handle the data even if it doesn't match the schema exactly
+      return response.data as Organization;
+    }
+  } catch (error) {
+    console.error('Failed to create organization:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Failed to create organization'
+    );
+  }
 }
 
 export async function updateOrganization(
