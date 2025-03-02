@@ -1,8 +1,10 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
+import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { Member, Organization } from '@/lib/db/_schema';
 import { member, organization, session } from '@/lib/db/schema';
@@ -11,6 +13,7 @@ import {
   OrganizationSettings,
   organizationSettingsSchema,
 } from '@/lib/types/organization';
+import { getBaseUrl, slugify } from '@/lib/utils';
 
 export async function getOrganization(
   id: string
@@ -44,11 +47,12 @@ export async function getUserOrganizations(
 
 export async function createOrganization(data: {
   name: string;
-  slug?: string;
   userId: string; // creator who becomes first admin
+  slug?: string;
+  logo?: string;
 }): Promise<Organization> {
-  const { name, slug, userId } = data;
-
+  const { name, slug, userId, logo } = data;
+  console.log({ name, slug, userId });
   // Start a transaction
   return db.transaction(async (tx) => {
     // Create organization

@@ -32,6 +32,7 @@ export async function createOrganizationAction(input: {
   name: string;
   slug?: string;
   userId: string;
+  logo?: string;
 }) {
   return createAction({
     schema: createOrganizationSchema,

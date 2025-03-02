@@ -64,8 +64,8 @@ export function useCreateOrganization() {
     },
     schema: organizationSchema,
     variablesSchema: createOrganizationSchema.extend({ userId: z.string() }),
-    component: 'CreateOrganization',
-    context: 'createOrganization',
+    component: 'useCreateOrganization',
+    context: `createOrganization`,
     successMessage: 'Organization created successfully',
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
