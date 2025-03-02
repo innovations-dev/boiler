@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
 import { auth } from '@/lib/auth';
+import { handleBetterFetchError } from '@/lib/better-auth/client';
 import { db } from '@/lib/db';
 import {
   organizationSchema,
@@ -104,10 +105,15 @@ export async function createOrganization(data: {
     );
 
     if (response.error) {
-      console.error('Failed to create organization:', response.error);
-      throw new Error(
-        response.error.message || 'Failed to create organization'
-      );
+      logger.error('Failed to create organization', {
+        error: response.error,
+        userId,
+        name,
+        slug,
+      });
+
+      // Use the centralized error handler
+      handleBetterFetchError(response);
     }
 
     if (!response.data) {

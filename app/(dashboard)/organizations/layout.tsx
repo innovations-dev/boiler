@@ -1,6 +1,4 @@
-import { redirect } from 'next/navigation';
-
-import { getOrganizationAccess } from '@/lib/auth/organization/get-organization-access';
+import { withOrganizationAccess } from '@/lib/auth/organization/with-organization-access';
 import { logger } from '@/lib/logger';
 
 export default async function OrganizationLayout({
@@ -29,47 +27,19 @@ export default async function OrganizationLayout({
     );
   }
 
-  const { hasAccess, session } = await getOrganizationAccess(params.slug);
-
-  logger.debug('Organization layout access check result', {
-    slug: params.slug,
-    hasAccess,
-    hasSession: !!session,
-    userId: session?.user?.id,
-    component: 'OrganizationLayout',
-  });
-
-  if (!session) {
-    const redirectUrl = '/sign-in?callbackUrl=/organizations/' + params.slug;
-    logger.debug('Organization layout - no session, redirecting to sign-in', {
-      redirectUrl,
+  // Use the withOrganizationAccess utility to handle access checks
+  return withOrganizationAccess(params.slug, async (session) => {
+    logger.debug('Organization layout - access granted, rendering children', {
+      slug: params.slug,
+      userId: session?.user?.id,
       component: 'OrganizationLayout',
     });
-    redirect(redirectUrl);
-  }
 
-  if (!hasAccess) {
-    logger.debug(
-      'Organization layout - no access, redirecting to organizations',
-      {
-        slug: params.slug,
-        userId: session.user.id,
-        component: 'OrganizationLayout',
-      }
+    return (
+      <div className="organization-layout">
+        {/* Organization header, navigation, etc. */}
+        <main>{children}</main>
+      </div>
     );
-    redirect('/organizations');
-  }
-
-  logger.debug('Organization layout - access granted, rendering children', {
-    slug: params.slug,
-    userId: session.user.id,
-    component: 'OrganizationLayout',
   });
-
-  return (
-    <div className="organization-layout">
-      {/* Organization header, navigation, etc. */}
-      <main>{children}</main>
-    </div>
-  );
 }
