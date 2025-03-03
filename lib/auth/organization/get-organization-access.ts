@@ -95,19 +95,60 @@ export async function getOrganizationAccess(organizationSlug: string) {
         stack:
           betterAuthError instanceof Error ? betterAuthError.stack : undefined,
         organizationSlug,
+        userId: session.user.id,
+        errorDetails: betterAuthError,
       });
+
+      // Check if the error is an authentication error
+      const isAuthError =
+        (betterAuthError instanceof Error &&
+          betterAuthError.message.includes('not authorized')) ||
+        (betterAuthError as any)?.code === 'UNAUTHORIZED';
+
+      if (isAuthError) {
+        orgLogger.warn(
+          'Authentication error with Better-Auth, user may need to re-authenticate',
+          {
+            userId: session.user.id,
+            organizationSlug,
+          }
+        );
+        return { hasAccess: false, session };
+      }
 
       // Fall back to legacy access check if Better-Auth fails
       orgLogger.debug('Falling back to legacy access check', {
         organizationSlug,
+        userId: session.user.id,
       });
 
-      // Import the legacy access check function dynamically to avoid circular dependencies
-      const { checkOrganizationAccess } = await import('./access');
-      hasAccess = await checkOrganizationAccess(
-        session.user.id,
-        organizationSlug
-      );
+      try {
+        // Import the legacy access check function dynamically to avoid circular dependencies
+        const { checkOrganizationAccess } = await import('./access');
+        hasAccess = await checkOrganizationAccess(
+          session.user.id,
+          organizationSlug
+        );
+
+        orgLogger.debug('Legacy access check result', {
+          hasAccess,
+          userId: session.user.id,
+          organizationSlug,
+        });
+      } catch (legacyError) {
+        orgLogger.error('Legacy access check also failed', {
+          error:
+            legacyError instanceof Error
+              ? legacyError.message
+              : String(legacyError),
+          stack: legacyError instanceof Error ? legacyError.stack : undefined,
+          userId: session.user.id,
+          organizationSlug,
+        });
+
+        // Default to no access if both checks fail
+        hasAccess = false;
+      }
     }
 
     if (hasAccess) {

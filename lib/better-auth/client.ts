@@ -7,6 +7,7 @@
 
 import { betterFetch } from '@better-fetch/fetch';
 
+import { auth } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { ERROR_CODES } from '@/lib/types/responses/error';
@@ -57,13 +58,15 @@ export class BetterAuthClient {
     try {
       const url = `${this.baseUrl}/api/auth${endpoint}`;
 
-      // Set default headers
+      // Set default headers with credentials
       const requestOptions = {
         ...options,
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
+        // Add credentials to ensure cookies are sent with the request
+        credentials: 'include' as RequestCredentials,
       };
 
       const response = await betterFetch<T>(url, requestOptions);
@@ -197,10 +200,18 @@ export const betterAuthClient = new BetterAuthClient();
 
 // Helper function to handle errors
 export function handleBetterFetchError(error: any): never {
+  // Log the error for debugging
+  logger.error('Better-Auth fetch error', {
+    error: error?.error || error,
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+
   if (error?.error?.code === BetterAuthErrorCode.UNAUTHORIZED) {
     throw new AppError('You are not authorized to perform this action', {
       code: ERROR_CODES.UNAUTHORIZED,
       status: 401,
+      context: error?.error?.context || undefined,
+      cause: error?.error?.message || undefined,
     });
   }
 
@@ -208,6 +219,8 @@ export function handleBetterFetchError(error: any): never {
     throw new AppError('You do not have permission to perform this action', {
       code: ERROR_CODES.FORBIDDEN,
       status: 403,
+      context: error?.error?.context || undefined,
+      cause: error?.error?.message || undefined,
     });
   }
 
@@ -215,6 +228,8 @@ export function handleBetterFetchError(error: any): never {
     throw new AppError('The requested resource was not found', {
       code: ERROR_CODES.NOT_FOUND,
       status: 404,
+      context: error?.error?.context || undefined,
+      cause: error?.error?.message || undefined,
     });
   }
 
@@ -225,32 +240,43 @@ export function handleBetterFetchError(error: any): never {
         throw new AppError('Invalid request data', {
           code: ERROR_CODES.BAD_REQUEST,
           status: 400,
-          context: error.error.context,
+          context: error.error.context || undefined,
+          cause: error.error.message || undefined,
         });
       case 401:
         throw new AppError('Authentication required', {
           code: ERROR_CODES.UNAUTHORIZED,
           status: 401,
+          context: error.error.context || undefined,
+          cause: error.error.message || undefined,
         });
       case 403:
         throw new AppError('Permission denied', {
           code: ERROR_CODES.FORBIDDEN,
           status: 403,
+          context: error.error.context || undefined,
+          cause: error.error.message || undefined,
         });
       case 404:
         throw new AppError('Resource not found', {
           code: ERROR_CODES.NOT_FOUND,
           status: 404,
+          context: error.error.context || undefined,
+          cause: error.error.message || undefined,
         });
       case 409:
         throw new AppError('Resource conflict', {
           code: ERROR_CODES.CONFLICT,
           status: 409,
+          context: error.error.context || undefined,
+          cause: error.error.message || undefined,
         });
       case 429:
         throw new AppError('Too many requests', {
           code: ERROR_CODES.TOO_MANY_REQUESTS,
           status: 429,
+          context: error.error.context || undefined,
+          cause: error.error.message || undefined,
         });
     }
   }
@@ -259,5 +285,7 @@ export function handleBetterFetchError(error: any): never {
   throw new AppError('An unexpected error occurred', {
     code: ERROR_CODES.INTERNAL_SERVER_ERROR,
     status: 500,
+    context: error?.error?.context || undefined,
+    cause: error instanceof Error ? error.message : String(error),
   });
 }
