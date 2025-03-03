@@ -17,6 +17,7 @@ import {
   OrganizationWorkspace,
   UpdateWorkspaceRequest,
 } from '@/lib/domains/organization/types';
+import { getCacheSettings } from '@/lib/query/cache-config';
 import { queryKeys } from '@/lib/query/keys';
 
 /**
@@ -29,13 +30,18 @@ export function useOrganizationMetrics(organizationId: string) {
   return useQuery({
     queryKey: queryKeys.organizations.extensions.metrics(organizationId),
     queryFn: async () => {
-      const response = await fetch(`/api/orgs/${organizationId}/metrics`);
+      const response = await fetch(`/api/orgs/${organizationId}/metrics`, {
+        // Explicitly opt into caching with Next.js 15
+        cache: 'force-cache',
+        next: { revalidate: 120 }, // 2 minutes, matching our cache config
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch organization metrics');
       }
       return response.json() as Promise<OrganizationMetrics>;
     },
     enabled: !!organizationId,
+    ...getCacheSettings('organizationExtensions', 'metrics'),
   });
 }
 
@@ -57,7 +63,12 @@ export function useOrganizationActivity(
     ],
     queryFn: async () => {
       const response = await fetch(
-        `/api/orgs/${organizationId}/activity?limit=${limit}`
+        `/api/orgs/${organizationId}/activity?limit=${limit}`,
+        {
+          // Explicitly opt into caching with Next.js 15
+          cache: 'force-cache',
+          next: { revalidate: 300 }, // 5 minutes, matching our cache config
+        }
       );
       if (!response.ok) {
         throw new Error('Failed to fetch organization activity');
@@ -65,6 +76,7 @@ export function useOrganizationActivity(
       return response.json() as Promise<OrganizationActivity[]>;
     },
     enabled: !!organizationId,
+    ...getCacheSettings('organizationExtensions', 'activity'),
   });
 }
 
@@ -92,6 +104,8 @@ export function useRecordActivity() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ type, data }),
+        // Ensure we're not caching POST requests
+        cache: 'no-store',
       });
 
       if (!response.ok) {
@@ -101,6 +115,7 @@ export function useRecordActivity() {
       return response.json();
     },
     onSuccess: (_, variables) => {
+      // Optimistic update: Invalidate activity queries for this organization
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.extensions.activity(
           variables.organizationId
@@ -120,13 +135,18 @@ export function useOrganizationWorkspaces(organizationId: string) {
   return useQuery({
     queryKey: queryKeys.organizations.extensions.workspaces.all(organizationId),
     queryFn: async () => {
-      const response = await fetch(`/api/orgs/${organizationId}/workspaces`);
+      const response = await fetch(`/api/orgs/${organizationId}/workspaces`, {
+        // Explicitly opt into caching with Next.js 15
+        cache: 'force-cache',
+        next: { revalidate: 900 }, // 15 minutes, matching our cache config
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch organization workspaces');
       }
       return response.json() as Promise<OrganizationWorkspace[]>;
     },
     enabled: !!organizationId,
+    ...getCacheSettings('organizationExtensions', 'workspaces'),
   });
 }
 
@@ -148,7 +168,12 @@ export function useOrganizationWorkspace(
     ],
     queryFn: async () => {
       const response = await fetch(
-        `/api/orgs/${organizationId}/workspaces/${workspaceId}`
+        `/api/orgs/${organizationId}/workspaces/${workspaceId}`,
+        {
+          // Explicitly opt into caching with Next.js 15
+          cache: 'force-cache',
+          next: { revalidate: 900 }, // 15 minutes, matching our cache config
+        }
       );
       if (!response.ok) {
         throw new Error('Failed to fetch workspace');
@@ -156,6 +181,7 @@ export function useOrganizationWorkspace(
       return response.json() as Promise<OrganizationWorkspace>;
     },
     enabled: !!workspaceId && !!organizationId,
+    ...getCacheSettings('organizationExtensions', 'workspaces'),
   });
 }
 
@@ -183,6 +209,8 @@ export function useCreateWorkspace() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, description }),
+        // Ensure we're not caching POST requests
+        cache: 'no-store',
       });
 
       if (!response.ok) {
@@ -191,12 +219,25 @@ export function useCreateWorkspace() {
 
       return response.json() as Promise<OrganizationWorkspace>;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (newWorkspace, variables) => {
+      // Optimistic update: Add the new workspace to the cache
+      queryClient.setQueryData(
+        queryKeys.organizations.extensions.workspaces.all(
+          variables.organizationId
+        ),
+        (oldData: OrganizationWorkspace[] | undefined) => {
+          if (!oldData) return [newWorkspace];
+          return [...oldData, newWorkspace];
+        }
+      );
+
+      // Also invalidate the query to ensure fresh data
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.extensions.workspaces.all(
           variables.organizationId
         ),
       });
+
       toast.success('Workspace created successfully');
     },
   });
@@ -230,6 +271,8 @@ export function useUpdateWorkspace() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ name, description }),
+          // Ensure we're not caching PUT requests
+          cache: 'no-store',
         }
       );
 
@@ -239,18 +282,40 @@ export function useUpdateWorkspace() {
 
       return response.json() as Promise<OrganizationWorkspace>;
     },
-    onSuccess: (_, variables) => {
-      // Invalidate the specific workspace query
-      queryClient.invalidateQueries({
-        queryKey: [
+    onSuccess: (updatedWorkspace, variables) => {
+      // Optimistic update: Update the specific workspace in the cache
+      queryClient.setQueryData(
+        [
           ...queryKeys.organizations.extensions.workspaces.detail(
             variables.workspaceId
           ),
           variables.organizationId,
         ],
+        updatedWorkspace
+      );
+
+      // Update the workspace in the list cache
+      queryClient.setQueryData(
+        queryKeys.organizations.extensions.workspaces.all(
+          variables.organizationId
+        ),
+        (oldData: OrganizationWorkspace[] | undefined) => {
+          if (!oldData) return [updatedWorkspace];
+          return oldData.map((workspace) =>
+            workspace.id === variables.workspaceId
+              ? updatedWorkspace
+              : workspace
+          );
+        }
+      );
+
+      // Also invalidate queries to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.extensions.workspaces.detail(
+          variables.workspaceId
+        ),
       });
 
-      // Invalidate the workspaces list query
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.extensions.workspaces.all(
           variables.organizationId
@@ -282,6 +347,8 @@ export function useDeleteWorkspace() {
         `/api/orgs/${organizationId}/workspaces/${workspaceId}`,
         {
           method: 'DELETE',
+          // Ensure we're not caching DELETE requests
+          cache: 'no-store',
         }
       );
 
@@ -292,7 +359,30 @@ export function useDeleteWorkspace() {
       return response.json();
     },
     onSuccess: (_, variables) => {
-      // Invalidate the workspaces list query
+      // Optimistic update: Remove the workspace from the list cache
+      queryClient.setQueryData(
+        queryKeys.organizations.extensions.workspaces.all(
+          variables.organizationId
+        ),
+        (oldData: OrganizationWorkspace[] | undefined) => {
+          if (!oldData) return [];
+          return oldData.filter(
+            (workspace) => workspace.id !== variables.workspaceId
+          );
+        }
+      );
+
+      // Remove the specific workspace from the cache
+      queryClient.removeQueries({
+        queryKey: [
+          ...queryKeys.organizations.extensions.workspaces.detail(
+            variables.workspaceId
+          ),
+          variables.organizationId,
+        ],
+      });
+
+      // Also invalidate the list query to ensure fresh data
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.extensions.workspaces.all(
           variables.organizationId
@@ -307,19 +397,27 @@ export function useDeleteWorkspace() {
 /**
  * Hook to fetch enhanced organization data
  *
- * @param slug - The slug of the organization
+ * @param slug - The organization slug
  * @returns Query result with enhanced organization data
  */
 export function useEnhancedOrganization(slug: string) {
   return useQuery({
     queryKey: queryKeys.organizations.extensions.enhanced(slug),
     queryFn: async () => {
-      const response = await fetch(`/api/org/${slug}/enhanced`);
+      const response = await fetch(
+        `/api/organizations-by-slug/${slug}/enhanced`,
+        {
+          // Explicitly opt into caching with Next.js 15
+          cache: 'force-cache',
+          next: { revalidate: 300 }, // 5 minutes
+        }
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch enhanced organization data');
       }
       return response.json() as Promise<EnhancedOrganization>;
     },
     enabled: !!slug,
+    ...getCacheSettings('organization'), // Use the organization cache settings
   });
 }

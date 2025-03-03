@@ -10,6 +10,9 @@ import {
 } from '@/lib/domains/organization/types';
 import { logger } from '@/lib/logger';
 
+// Define cache revalidation time (2 minutes)
+export const revalidate = 120;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { organizationId: string } }
@@ -45,7 +48,12 @@ export async function GET(
     // Get the metrics
     const metrics = await service.getMetrics(organizationId);
 
-    return NextResponse.json(metrics);
+    // Return the response with cache headers
+    return NextResponse.json(metrics, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=60',
+      },
+    });
   } catch (error) {
     logger.error('Error fetching organization metrics', {
       error: error instanceof Error ? error.message : String(error),
