@@ -321,3 +321,45 @@ export function useHasPermission(data: {
       !!data.permission,
   });
 }
+
+/**
+ * Hook to fetch organization metrics
+ *
+ * @param organizationId - The ID of the organization
+ * @returns Query result with organization metrics
+ */
+export function useOrganizationMetrics(organizationId: string) {
+  return useQuery({
+    queryKey: queryKeys.organizations.extensions.metrics(organizationId),
+    queryFn: async () => {
+      const response = await fetch(`/api/orgs/${organizationId}/metrics`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization metrics');
+      }
+      return response.json();
+    },
+    enabled: !!organizationId,
+  });
+}
+
+/**
+ * Hook to fetch active sessions for an organization
+ *
+ * @param organizationId - The ID of the organization
+ * @returns Query result with active sessions data
+ */
+export function useActiveSessions(organizationId: string) {
+  return useQuery({
+    queryKey: queryKeys.organizations.extensions.activeSessions(organizationId),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/orgs/${organizationId}/active-sessions`
+      );
+      if (!response.ok) {
+        throw new Error('Failed to fetch active sessions');
+      }
+      return response.json();
+    },
+    enabled: !!organizationId,
+  });
+}

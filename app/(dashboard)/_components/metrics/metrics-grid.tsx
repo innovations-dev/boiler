@@ -2,8 +2,11 @@
 
 import { Activity, Mail, Users } from 'lucide-react';
 
-import { useActiveSessions } from '@/lib/hooks/organizations/use-active-sessions';
-import { useOrganizationMetrics } from '@/lib/hooks/organizations/use-organization-data';
+import {
+  useActiveSessions,
+  useOrganization,
+  useOrganizationMetrics,
+} from '@/lib/hooks/organizations/use-better-auth-organization';
 
 import { MetricCard } from './metric-card';
 
@@ -12,10 +15,14 @@ interface MetricsGridProps {
 }
 
 export function MetricsGrid({ slug }: MetricsGridProps) {
-  const { data: metrics, isLoading: isLoadingMetrics } =
-    useOrganizationMetrics(slug);
+  const { data: organization } = useOrganization(slug);
+  const organizationId = organization?.id;
+
+  const { data: metrics, isLoading: isLoadingMetrics } = useOrganizationMetrics(
+    organizationId || ''
+  );
   const { data: activeSessions, isLoading: isLoadingActiveSessions } =
-    useActiveSessions(slug);
+    useActiveSessions(organizationId || '');
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -24,21 +31,21 @@ export function MetricsGrid({ slug }: MetricsGridProps) {
         value={metrics?.totalMembers ?? 0}
         icon={<Users className="h-4 w-4" />}
         description="Total organization members"
-        isLoading={isLoadingMetrics}
+        isLoading={isLoadingMetrics || !organizationId}
       />
       <MetricCard
         title="Active Sessions"
         value={activeSessions?.activeSessions ?? 0}
         icon={<Activity className="h-4 w-4" />}
         description="Currently active users"
-        isLoading={isLoadingActiveSessions}
+        isLoading={isLoadingActiveSessions || !organizationId}
       />
       <MetricCard
         title="Pending Invitations"
         value={metrics?.pendingInvitations ?? 0}
         icon={<Mail className="h-4 w-4" />}
         description="Awaiting response"
-        isLoading={isLoadingMetrics}
+        isLoading={isLoadingMetrics || !organizationId}
       />
     </div>
   );

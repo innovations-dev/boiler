@@ -111,6 +111,11 @@ export const queryKeys = {
        */
       activity: (organizationId: string) =>
         ['organization-extensions', 'activity', organizationId] as const,
+      /** Get active sessions for an organization
+       * @param {string} organizationId - Organization ID
+       */
+      activeSessions: (organizationId: string) =>
+        ['organization-extensions', 'active-sessions', organizationId] as const,
       /** Workspace-related queries */
       workspaces: {
         /** Get all workspaces for an organization
