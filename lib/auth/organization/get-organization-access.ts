@@ -1,10 +1,15 @@
 // lib/auth/organization/get-organization-access.ts
+/**
+ * @fileoverview Utility for checking organization access
+ * This module provides a function to check if a user has access to an organization
+ * It uses Better-Auth for checking organization access, with a fallback to legacy database queries.
+ */
+
 import { headers } from 'next/headers';
 
 import { auth } from '@/lib/auth';
+import { organizationService } from '@/lib/better-auth/organization';
 import { withOrganizationContext } from '@/lib/logger';
-
-import { checkOrganizationAccess } from './access';
 
 /**
  * Get organization access for a user
@@ -61,11 +66,49 @@ export async function getOrganizationAccess(organizationSlug: string) {
       organizationSlug,
     });
 
-    // Check organization access
-    const hasAccess = await checkOrganizationAccess(
-      session.user.id,
-      organizationSlug
-    );
+    // Check organization access using Better-Auth
+    let hasAccess = false;
+    try {
+      // Get the organization by slug
+      const organization =
+        await organizationService.getFullOrganization(organizationSlug);
+
+      // Check if the user is a member of the organization
+      const isMember = organization.members.some(
+        (member) => member.userId === session.user.id
+      );
+
+      hasAccess = isMember;
+
+      orgLogger.debug('Better-Auth organization access check result', {
+        hasAccess,
+        userId: session.user.id,
+        organizationId: organization.id,
+        memberCount: organization.members.length,
+      });
+    } catch (betterAuthError) {
+      orgLogger.error('Error checking organization access with Better-Auth', {
+        error:
+          betterAuthError instanceof Error
+            ? betterAuthError.message
+            : String(betterAuthError),
+        stack:
+          betterAuthError instanceof Error ? betterAuthError.stack : undefined,
+        organizationSlug,
+      });
+
+      // Fall back to legacy access check if Better-Auth fails
+      orgLogger.debug('Falling back to legacy access check', {
+        organizationSlug,
+      });
+
+      // Import the legacy access check function dynamically to avoid circular dependencies
+      const { checkOrganizationAccess } = await import('./access');
+      hasAccess = await checkOrganizationAccess(
+        session.user.id,
+        organizationSlug
+      );
+    }
 
     if (hasAccess) {
       orgLogger.debug('User has access to organization', {

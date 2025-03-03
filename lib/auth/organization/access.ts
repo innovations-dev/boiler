@@ -1,6 +1,8 @@
 /**
  * @fileoverview Utilities for organization access control
  * This module provides functions to check if a user has access to an organization
+ * @deprecated This module uses legacy database queries and will be replaced with Better-Auth based implementation.
+ * Please use the Better-Auth organization service directly in new code.
  */
 
 import { and, eq } from 'drizzle-orm';
@@ -14,13 +16,18 @@ import { logger } from '@/lib/logger';
  * @param userId The user ID
  * @param orgSlug The organization slug
  * @returns True if the user has access, false otherwise
+ * @deprecated This function uses legacy database queries and will be replaced with Better-Auth based implementation.
+ * Please use the Better-Auth organization service directly in new code.
  */
 export async function checkOrganizationAccess(
   userId: string,
   orgSlug: string
 ): Promise<boolean> {
   try {
-    logger.debug('Checking organization access', { userId, orgSlug });
+    logger.debug('Checking organization access (legacy method)', {
+      userId,
+      orgSlug,
+    });
 
     // Get the organization by slug
     logger.debug('Querying organization by slug', { orgSlug });

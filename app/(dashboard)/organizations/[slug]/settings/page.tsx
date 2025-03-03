@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 
+import { OrganizationProvider } from '@/app/(dashboard)/_context/organization-context';
 import { Shell } from '@/components/shell';
 import { withOrganizationAccess } from '@/lib/auth/organization/with-organization-access';
 import { organizationService } from '@/lib/better-auth/organization';
@@ -49,20 +50,22 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
       });
 
       return (
-        <Shell>
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Organization Settings
-              </h1>
-              <p className="text-muted-foreground">
-                Manage your organization profile and preferences
-              </p>
-            </div>
+        <OrganizationProvider organization={org} currentMember={userMember}>
+          <Shell>
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  Organization Settings
+                </h1>
+                <p className="text-muted-foreground">
+                  Manage your organization profile and preferences
+                </p>
+              </div>
 
-            <OrganizationForm organization={org} />
-          </div>
-        </Shell>
+              <OrganizationForm organization={org} />
+            </div>
+          </Shell>
+        </OrganizationProvider>
       );
     } catch (error) {
       logger.error('Error fetching organization', {
