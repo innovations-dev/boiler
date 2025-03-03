@@ -13,7 +13,7 @@ const sessionsCache = new Map<string, { data: any; timestamp: number }>();
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
   try {
     const userId = req.headers.get('x-user-id');
@@ -28,11 +28,11 @@ export async function GET(
 
     // Await params before using its properties
     const resolvedParams = await params;
-    const { slug } = resolvedParams;
+    const { organizationId } = resolvedParams;
 
     // Get organization and validate access
     const org = await db.query.organization.findFirst({
-      where: eq(organization.slug, slug),
+      where: eq(organization.id, organizationId),
       with: {
         members: {
           where: eq(member.userId, userId),
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     // Check cache first
-    const cacheKey = `active-sessions:${org.id}`;
+    const cacheKey = `active-sessions:${organization.id}`;
     const cached = sessionsCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < ACTIVE_SESSIONS_CACHE_TIME) {
       return Response.json(cached.data);
@@ -70,7 +70,7 @@ export async function GET(
       .from(session)
       .where(
         and(
-          eq(session.activeOrganizationId, org.id),
+          eq(session.activeOrganizationId, organization.id),
           gt(session.expiresAt, new Date())
         )
       );
@@ -90,27 +90,27 @@ export async function GET(
     if (sessionId) {
       logger.info('Active sessions accessed', {
         type: 'active_sessions_accessed',
-        organizationId: org.id,
+        organizationId: organization.id,
         userId,
         sessionId,
-        memberRole: org.members[0].role,
+        memberRole: organization.members[0].role,
       });
     }
 
     return Response.json(result);
   } catch (error) {
-    // Get slug from params for error logging, handling the Promise
-    let slug = 'unknown';
+    // Get organizationId from params for error logging, handling the Promise
+    let organizationId = 'unknown';
     try {
       const resolvedParams = await params;
-      slug = resolvedParams.slug;
+      organizationId = resolvedParams.organizationId;
     } catch (paramsError) {
       logger.error('Error resolving params', { error: paramsError });
     }
 
     logger.error('Error fetching active sessions', {
       error,
-      slug,
+      organizationId,
     });
 
     if (error instanceof AppError) {

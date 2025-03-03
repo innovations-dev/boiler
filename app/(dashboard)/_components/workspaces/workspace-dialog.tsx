@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
-import { ErrorDisplay } from '@/app/_components/errors/error-display';
+import { EnhancedErrorDisplay } from '@/app/_components/errors/enhanced-error-display';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,6 +32,7 @@ import {
   UpdateWorkspaceRequest,
 } from '@/lib/domains/organization/types';
 import { handleUnknownError } from '@/lib/errors';
+import { useErrorHandler } from '@/lib/hooks/use-error-handler';
 import {
   useCreateWorkspace,
   useDeleteWorkspace,
@@ -143,7 +144,11 @@ WorkspaceDialog.Form = function WorkspaceDialogForm({
   cancelLabel = 'Cancel',
   onCancel,
 }: WorkspaceDialogFormProps) {
-  const [formError, setFormError] = React.useState<ErrorResponse | null>(null);
+  const { error, fieldErrors, isRecovering, handleError, clearErrors } =
+    useErrorHandler({
+      context: 'WorkspaceDialog.Form',
+      showToasts: false,
+    });
 
   const form = useForm<WorkspaceFormValues>({
     resolver: zodResolver(workspaceFormSchema),
@@ -152,25 +157,23 @@ WorkspaceDialog.Form = function WorkspaceDialogForm({
 
   const handleSubmit = async (values: WorkspaceFormValues) => {
     try {
-      setFormError(null);
+      clearErrors();
       await onSubmit(values);
       form.reset();
+      toast.success('Workspace saved successfully');
     } catch (error) {
       console.error('Form submission error:', error);
 
-      // Convert to standard error response
-      const errorResponse = handleUnknownError(error, 'WorkspaceDialog.Form');
-      setFormError(errorResponse);
+      // Handle the error using our error handler
+      const { errorResponse, fieldErrors } = handleError(error, 'submit');
 
       // If the error contains field-specific errors, set them on the form
-      if (error instanceof Error && 'context' in error && error.context) {
-        const fieldErrors = error.context as Record<string, string[]>;
-
-        Object.entries(fieldErrors).forEach(([field, messages]) => {
+      if (fieldErrors) {
+        Object.entries(fieldErrors).forEach(([field, message]) => {
           if (field in form.formState.errors) {
             form.setError(field as any, {
               type: 'server',
-              message: Array.isArray(messages) ? messages[0] : messages,
+              message,
             });
           }
         });
@@ -178,16 +181,16 @@ WorkspaceDialog.Form = function WorkspaceDialogForm({
     }
   };
 
-  const resetError = () => {
-    setFormError(null);
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        {formError && (
+        {error && (
           <div className="mb-4">
-            <ErrorDisplay error={formError} />
+            <EnhancedErrorDisplay
+              error={error}
+              onRetry={clearErrors}
+              variant="alert"
+            />
           </div>
         )}
 
@@ -211,12 +214,12 @@ WorkspaceDialog.Form = function WorkspaceDialogForm({
             type="button"
             variant="outline"
             onClick={onCancel}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isRecovering}
           >
             {cancelLabel}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : submitLabel}
+          <Button type="submit" disabled={isSubmitting || isRecovering}>
+            {isSubmitting || isRecovering ? 'Saving...' : submitLabel}
           </Button>
         </DialogFooter>
       </form>
@@ -247,46 +250,39 @@ WorkspaceDialog.Confirmation = function WorkspaceDialogConfirmation({
   cancelLabel = 'Cancel',
   onCancel,
 }: WorkspaceDialogConfirmationProps) {
-  const [confirmError, setConfirmError] = React.useState<ErrorResponse | null>(
-    null
-  );
+  const { error, isRecovering, handleError, clearErrors } = useErrorHandler({
+    context: 'WorkspaceDialog.Confirmation',
+    showToasts: false,
+  });
 
   const handleConfirm = async () => {
     try {
-      setConfirmError(null);
+      clearErrors();
       await onConfirm();
+      toast.success('Operation completed successfully');
     } catch (error) {
-      console.error('Confirmation error:', error);
-
-      // Convert to standard error response
-      const errorResponse = handleUnknownError(
-        error,
-        'WorkspaceDialog.Confirmation'
-      );
-      setConfirmError(errorResponse);
+      handleError(error, 'confirm');
     }
-  };
-
-  const resetError = () => {
-    setConfirmError(null);
   };
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{message}</p>
-
-      {confirmError && (
-        <div className="mb-4">
-          <ErrorDisplay error={confirmError} />
-        </div>
+      {error && (
+        <EnhancedErrorDisplay
+          error={error}
+          onRetry={clearErrors}
+          variant="alert"
+        />
       )}
+
+      <p className="text-sm text-muted-foreground">{message}</p>
 
       <DialogFooter>
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
-          disabled={isConfirming}
+          disabled={isConfirming || isRecovering}
         >
           {cancelLabel}
         </Button>
@@ -294,9 +290,9 @@ WorkspaceDialog.Confirmation = function WorkspaceDialogConfirmation({
           type="button"
           variant="destructive"
           onClick={handleConfirm}
-          disabled={isConfirming}
+          disabled={isConfirming || isRecovering}
         >
-          {isConfirming ? 'Processing...' : confirmLabel}
+          {isConfirming || isRecovering ? 'Processing...' : confirmLabel}
         </Button>
       </DialogFooter>
     </div>

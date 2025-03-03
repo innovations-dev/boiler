@@ -13,7 +13,7 @@ const sessionsCache = new Map<string, { data: any; timestamp: number }>();
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const userId = req.headers.get('x-user-id');
@@ -26,9 +26,13 @@ export async function GET(
       });
     }
 
+    // Await params before using its properties
+    const resolvedParams = await params;
+    const { slug } = resolvedParams;
+
     // Get organization and validate access
     const org = await db.query.organization.findFirst({
-      where: eq(organization.slug, params.slug),
+      where: eq(organization.slug, slug),
       with: {
         members: {
           where: eq(member.userId, userId),
@@ -95,9 +99,18 @@ export async function GET(
 
     return Response.json(result);
   } catch (error) {
+    // Get slug from params for error logging, handling the Promise
+    let slug = 'unknown';
+    try {
+      const resolvedParams = await params;
+      slug = resolvedParams.slug;
+    } catch (paramsError) {
+      logger.error('Error resolving params', { error: paramsError });
+    }
+
     logger.error('Error fetching active sessions', {
       error,
-      slug: params.slug,
+      slug,
     });
 
     if (error instanceof AppError) {

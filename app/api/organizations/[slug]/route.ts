@@ -66,9 +66,13 @@ async function validateOrganizationAccess(slug: string, userId: string) {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return withOrganizationApiAccess(request, params.slug, async (session) => {
+  // Await params before using its properties
+  const resolvedParams = await params;
+  const { slug } = resolvedParams;
+
+  return withOrganizationApiAccess(request, slug, async (session) => {
     const userId = request.headers.get('x-user-id');
     if (!userId) {
       throw new AppError('User ID not found in request', {
@@ -78,7 +82,7 @@ export async function GET(
     }
 
     const { organization, member } = await validateOrganizationAccess(
-      params.slug,
+      slug,
       userId
     );
 
@@ -93,9 +97,13 @@ const updateOrganizationSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  return withOrganizationApiAccess(req, params.slug, async (session) => {
+  // Await params before using its properties
+  const resolvedParams = await params;
+  const { slug } = resolvedParams;
+
+  return withOrganizationApiAccess(req, slug, async (session) => {
     try {
       const userId = req.headers.get('x-user-id');
       if (!userId) {
@@ -106,7 +114,7 @@ export async function PATCH(
       }
 
       const { organization: org, member } = await validateOrganizationAccess(
-        params.slug,
+        slug,
         userId
       );
 
@@ -130,10 +138,10 @@ export async function PATCH(
         .where(eq(organization.id, org.id))
         .returning();
 
-      return Response.json(organizationSchema.parse(updated));
+      return NextResponse.json(organizationSchema.parse(updated));
     } catch (error) {
       if (error instanceof AppError) {
-        return Response.json(
+        return NextResponse.json(
           { message: error.message, code: error.code },
           { status: error.status }
         );

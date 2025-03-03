@@ -49,18 +49,15 @@ export const organizationExtensionsKeys = {
  */
 export function useOrganizationMetrics(organizationId: string) {
   return useQuery({
-    queryKey: organizationExtensionsKeys.metrics(organizationId),
+    queryKey: ['organization', organizationId, 'metrics'],
     queryFn: async () => {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/metrics`
-      );
+      const response = await fetch(`/api/orgs/${organizationId}/metrics`);
       if (!response.ok) {
         throw new Error('Failed to fetch organization metrics');
       }
-      return response.json() as Promise<OrganizationMetrics>;
+      return response.json();
     },
     enabled: !!organizationId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
@@ -69,29 +66,20 @@ export function useOrganizationMetrics(organizationId: string) {
  */
 export function useOrganizationActivity(
   organizationId: string,
-  limit?: number
+  limit: number = 10
 ) {
   return useQuery({
-    queryKey: [
-      ...organizationExtensionsKeys.activity(organizationId),
-      { limit },
-    ],
+    queryKey: ['organization', organizationId, 'activity', limit],
     queryFn: async () => {
-      const url = new URL(
-        `/api/organizations/${organizationId}/activity`,
-        window.location.origin
+      const response = await fetch(
+        `/api/orgs/${organizationId}/activity?limit=${limit}`
       );
-      if (limit) {
-        url.searchParams.append('limit', limit.toString());
-      }
-      const response = await fetch(url.toString());
       if (!response.ok) {
         throw new Error('Failed to fetch organization activity');
       }
-      return response.json() as Promise<OrganizationActivity[]>;
+      return response.json();
     },
     enabled: !!organizationId,
-    staleTime: 1000 * 60, // 1 minute
   });
 }
 
@@ -103,18 +91,15 @@ export function useOrganizationActivity(
  */
 export function useOrganizationWorkspaces(organizationId: string) {
   return useQuery({
-    queryKey: organizationExtensionsKeys.workspaces.all(organizationId),
+    queryKey: ['organization', organizationId, 'workspaces'],
     queryFn: async () => {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/workspaces`
-      );
+      const response = await fetch(`/api/orgs/${organizationId}/workspaces`);
       if (!response.ok) {
         throw new Error('Failed to fetch organization workspaces');
       }
-      return response.json() as Promise<OrganizationWorkspace[]>;
+      return response.json();
     },
     enabled: !!organizationId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
@@ -130,18 +115,17 @@ export function useOrganizationWorkspace(
   organizationId: string
 ) {
   return useQuery({
-    queryKey: organizationExtensionsKeys.workspaces.detail(workspaceId),
+    queryKey: ['organization', organizationId, 'workspace', workspaceId],
     queryFn: async () => {
       const response = await fetch(
-        `/api/organizations/${organizationId}/workspaces/${workspaceId}`
+        `/api/orgs/${organizationId}/workspaces/${workspaceId}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch workspace');
       }
-      return response.json() as Promise<OrganizationWorkspace>;
+      return response.json();
     },
     enabled: !!workspaceId && !!organizationId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
@@ -154,42 +138,33 @@ export function useCreateWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateWorkspaceRequest) => {
-      const response = await fetch(
-        `/api/organizations/${data.organizationId}/workspaces`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        }
-      );
+    mutationFn: async ({
+      organizationId,
+      name,
+      description,
+    }: {
+      organizationId: string;
+      name: string;
+      description?: string;
+    }) => {
+      const response = await fetch(`/api/orgs/${organizationId}/workspaces`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, description }),
+      });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create workspace');
+        throw new Error('Failed to create workspace');
       }
 
-      return response.json() as Promise<OrganizationWorkspace>;
+      return response.json();
     },
-    onSuccess: (data, variables) => {
-      // Invalidate workspaces query
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.workspaces.all(
-          variables.organizationId
-        ),
+        queryKey: ['organization', variables.organizationId, 'workspaces'],
       });
-
-      // Invalidate enhanced organization query that includes workspaces
-      queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.all,
-      });
-
-      toast.success('Workspace created successfully');
-    },
-    onError: (error) => {
-      toast.error(`Failed to create workspace: ${error.message}`);
     },
   });
 }
@@ -203,47 +178,46 @@ export function useUpdateWorkspace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: UpdateWorkspaceRequest) => {
+    mutationFn: async ({
+      organizationId,
+      workspaceId,
+      name,
+      description,
+    }: {
+      organizationId: string;
+      workspaceId: string;
+      name?: string;
+      description?: string;
+    }) => {
       const response = await fetch(
-        `/api/organizations/${data.organizationId}/workspaces/${data.id}`,
+        `/api/orgs/${organizationId}/workspaces/${workspaceId}`,
         {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify({ name, description }),
         }
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update workspace');
+        throw new Error('Failed to update workspace');
       }
 
-      return response.json() as Promise<OrganizationWorkspace>;
+      return response.json();
     },
-    onSuccess: (data) => {
-      // Invalidate specific workspace query
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.workspaces.detail(data.id),
+        queryKey: [
+          'organization',
+          variables.organizationId,
+          'workspace',
+          variables.workspaceId,
+        ],
       });
-
-      // Invalidate workspaces list query
       queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.workspaces.all(
-          data.organizationId
-        ),
+        queryKey: ['organization', variables.organizationId, 'workspaces'],
       });
-
-      // Invalidate enhanced organization query that includes workspaces
-      queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.all,
-      });
-
-      toast.success('Workspace updated successfully');
-    },
-    onError: (error) => {
-      toast.error(`Failed to update workspace: ${error.message}`);
     },
   });
 }
@@ -258,43 +232,29 @@ export function useDeleteWorkspace() {
 
   return useMutation({
     mutationFn: async ({
-      workspaceId,
       organizationId,
+      workspaceId,
     }: {
-      workspaceId: string;
       organizationId: string;
+      workspaceId: string;
     }) => {
       const response = await fetch(
-        `/api/organizations/${organizationId}/workspaces/${workspaceId}`,
+        `/api/orgs/${organizationId}/workspaces/${workspaceId}`,
         {
           method: 'DELETE',
         }
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete workspace');
+        throw new Error('Failed to delete workspace');
       }
 
-      return { workspaceId, organizationId };
+      return response.json();
     },
-    onSuccess: (data) => {
-      // Invalidate workspaces list query
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.workspaces.all(
-          data.organizationId
-        ),
+        queryKey: ['organization', variables.organizationId, 'workspaces'],
       });
-
-      // Invalidate enhanced organization query that includes workspaces
-      queryClient.invalidateQueries({
-        queryKey: organizationExtensionsKeys.all,
-      });
-
-      toast.success('Workspace deleted successfully');
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete workspace: ${error.message}`);
     },
   });
 }
@@ -316,5 +276,40 @@ export function useEnhancedOrganization(slug: string) {
     },
     enabled: !!slug,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useRecordActivity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      organizationId,
+      type,
+      data,
+    }: {
+      organizationId: string;
+      type: string;
+      data?: Record<string, any>;
+    }) => {
+      const response = await fetch(`/api/orgs/${organizationId}/activity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, data }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to record activity');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['organization', variables.organizationId, 'activity'],
+      });
+    },
   });
 }

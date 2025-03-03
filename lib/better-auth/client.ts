@@ -5,10 +5,8 @@
  * It handles authentication, error handling, and response parsing.
  */
 
-import { headers } from 'next/headers';
 import { betterFetch } from '@better-fetch/fetch';
 
-import { auth } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { ERROR_CODES } from '@/lib/types/responses/error';
@@ -57,22 +55,6 @@ export class BetterAuthClient {
     options: RequestInit = {}
   ): Promise<BetterAuthResponse<T>> {
     try {
-      // Get the session to verify authentication - using the same pattern as createOrganization
-      const session = await auth.api.getSession({
-        headers: await headers(),
-      });
-
-      if (!session) {
-        return {
-          success: false,
-          error: {
-            code: BetterAuthErrorCode.UNAUTHORIZED,
-            message: 'Authentication required',
-            status: 401,
-          },
-        };
-      }
-
       const url = `${this.baseUrl}/api/auth${endpoint}`;
 
       // Set default headers
@@ -251,35 +233,31 @@ export function handleBetterFetchError(error: any): never {
           status: 401,
         });
       case 403:
-        throw new AppError(
-          'You do not have permission to perform this action',
-          {
-            code: ERROR_CODES.FORBIDDEN,
-            status: 403,
-          }
-        );
+        throw new AppError('Permission denied', {
+          code: ERROR_CODES.FORBIDDEN,
+          status: 403,
+        });
       case 404:
-        throw new AppError('The requested resource was not found', {
+        throw new AppError('Resource not found', {
           code: ERROR_CODES.NOT_FOUND,
           status: 404,
         });
       case 409:
-        throw new AppError('A resource with this identifier already exists', {
+        throw new AppError('Resource conflict', {
           code: ERROR_CODES.CONFLICT,
           status: 409,
-          context: error.error.context,
         });
       case 429:
-        throw new AppError('Too many requests, please try again later', {
+        throw new AppError('Too many requests', {
           code: ERROR_CODES.TOO_MANY_REQUESTS,
           status: 429,
         });
     }
   }
 
-  throw new AppError(error?.error?.message || 'An unknown error occurred', {
+  // Default error
+  throw new AppError('An unexpected error occurred', {
     code: ERROR_CODES.INTERNAL_SERVER_ERROR,
     status: 500,
-    context: error?.error?.context,
   });
 }

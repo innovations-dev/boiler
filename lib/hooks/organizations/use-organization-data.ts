@@ -79,10 +79,42 @@ export function useOrganizationMember(slug: string, userId: string) {
 
 export function useOrganizationMetrics(slug: string) {
   return useQuery({
-    queryKey: queryKeys.organizations.metrics.all(slug),
-    queryFn: () => fetchOrganizationMetrics(slug),
-    refetchInterval: 60000 * 5, // Reduce polling frequency to once per minute
-    refetchIntervalInBackground: false, // Don't refetch in background
-    staleTime: 30000 * 2, // Data stays fresh for 30 seconds
+    queryKey: ['organization', slug, 'metrics'],
+    queryFn: async () => {
+      const response = await fetch(`/api/org/${slug}/metrics`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization metrics');
+      }
+      return response.json();
+    },
+    enabled: !!slug,
+  });
+}
+
+export function useActiveSessions(slug: string) {
+  return useQuery({
+    queryKey: ['organization', slug, 'active-sessions'],
+    queryFn: async () => {
+      const response = await fetch(`/api/org/${slug}/active-sessions`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch active sessions');
+      }
+      return response.json();
+    },
+    enabled: !!slug,
+  });
+}
+
+export function useEnhancedOrganization(slug: string) {
+  return useQuery({
+    queryKey: ['organization', slug, 'enhanced'],
+    queryFn: async () => {
+      const response = await fetch(`/api/org/${slug}/enhanced`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch enhanced organization data');
+      }
+      return response.json();
+    },
+    enabled: !!slug,
   });
 }

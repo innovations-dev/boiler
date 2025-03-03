@@ -12,21 +12,24 @@ import { ERROR_CODES } from '@/lib/types/responses/error';
 
 /**
  * Validate organization exists and user is a member
- * @param slug The slug of the organization
+ * @param organizationId The ID of the organization
  * @param userId The ID of the user
  * @returns The organization and member
  *
  * @example
- * const { organization, member } = await validateOrganizationAccess('my-org', '123');
+ * const { organization, member } = await validateOrganizationAccess('my-org-id', '123');
  * console.log(organization);
  * console.log(member);
  *
  * @throws {AppError} If the organization is not found
  * @throws {AppError} If the user is not a member of the organization
  */
-async function validateOrganizationAccess(slug: string, userId: string) {
+async function validateOrganizationAccess(
+  organizationId: string,
+  userId: string
+) {
   const org = await db.query.organization.findFirst({
-    where: eq(organization.slug, slug),
+    where: eq(organization.id, organizationId),
     with: {
       members: {
         where: eq(member.userId, userId),
@@ -41,14 +44,17 @@ async function validateOrganizationAccess(slug: string, userId: string) {
     });
   }
 
-  if (!org.members.length) {
-    throw new AppError('Not a member of this organization', {
+  if (org.members.length === 0) {
+    throw new AppError('User is not a member of this organization', {
       code: ERROR_CODES.FORBIDDEN,
       status: 403,
     });
   }
 
-  return { organization: org, member: org.members[0] };
+  return {
+    organization: org,
+    member: org.members[0],
+  };
 }
 
 /**
@@ -66,13 +72,13 @@ async function validateOrganizationAccess(slug: string, userId: string) {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
   // Await params before using its properties
   const resolvedParams = await params;
-  const { slug } = resolvedParams;
+  const { organizationId } = resolvedParams;
 
-  return withOrganizationApiAccess(request, slug, async (session) => {
+  return withOrganizationApiAccess(request, organizationId, async (session) => {
     const userId = request.headers.get('x-user-id');
     if (!userId) {
       throw new AppError('User ID not found in request', {
@@ -82,7 +88,7 @@ export async function GET(
     }
 
     const { organization, member } = await validateOrganizationAccess(
-      slug,
+      organizationId,
       userId
     );
 
@@ -97,13 +103,13 @@ const updateOrganizationSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
   // Await params before using its properties
   const resolvedParams = await params;
-  const { slug } = resolvedParams;
+  const { organizationId } = resolvedParams;
 
-  return withOrganizationApiAccess(req, slug, async (session) => {
+  return withOrganizationApiAccess(req, organizationId, async (session) => {
     try {
       const userId = req.headers.get('x-user-id');
       if (!userId) {
@@ -114,7 +120,7 @@ export async function PATCH(
       }
 
       const { organization: org, member } = await validateOrganizationAccess(
-        slug,
+        organizationId,
         userId
       );
 
@@ -138,10 +144,10 @@ export async function PATCH(
         .where(eq(organization.id, org.id))
         .returning();
 
-      return Response.json(organizationSchema.parse(updated));
+      return NextResponse.json(organizationSchema.parse(updated));
     } catch (error) {
       if (error instanceof AppError) {
-        return Response.json(
+        return NextResponse.json(
           { message: error.message, code: error.code },
           { status: error.status }
         );

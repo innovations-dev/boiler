@@ -20,7 +20,7 @@ export const revalidate = 300; // 5 minutes (300 seconds) cache time
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ organizationId: string }> }
 ) {
   try {
     const userId = req.headers.get('x-user-id');
@@ -35,13 +35,13 @@ export async function GET(
 
     // Await params before using its properties
     const resolvedParams = await params;
-    const { slug } = resolvedParams;
+    const { organizationId } = resolvedParams;
 
-    const orgLogger = withOrganizationContext(slug);
+    const orgLogger = withOrganizationContext(organizationId);
 
     orgLogger.debug('Fetching organization metrics');
 
-    const { hasAccess, session } = await getOrganizationAccess(slug);
+    const { hasAccess, session } = await getOrganizationAccess(organizationId);
 
     if (!session) {
       orgLogger.warn('Unauthenticated metrics access attempt');
@@ -62,7 +62,7 @@ export async function GET(
     }
 
     const org = await db.query.organization.findFirst({
-      where: eq(organization.slug, slug),
+      where: eq(organization.id, organizationId),
       with: {
         members: {
           where: eq(member.userId, userId),
@@ -154,18 +154,18 @@ export async function GET(
 
     return Response.json(organizationMetricsSchema.parse(result));
   } catch (error) {
-    // Get slug from params for error logging, handling the Promise
-    let slug = 'unknown';
+    // Get organizationId from params for error logging, handling the Promise
+    let organizationId = 'unknown';
     try {
       const resolvedParams = await params;
-      slug = resolvedParams.slug;
+      organizationId = resolvedParams.organizationId;
     } catch (paramsError) {
       logger.error('Error resolving params', { error: paramsError });
     }
 
     logger.error('Error fetching organization metrics', {
       error,
-      slug,
+      organizationId,
     });
 
     if (error instanceof AppError) {

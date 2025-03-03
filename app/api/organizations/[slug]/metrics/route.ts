@@ -19,14 +19,26 @@ export const dynamic = 'force-dynamic'; // Or use 'auto' if you want Next.js to 
 export const revalidate = 300; // 5 minutes (300 seconds) cache time
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  // Ensure params is awaited
-  const { slug } = await params;
-  const orgLogger = withOrganizationContext(slug);
-
   try {
+    const userId = req.headers.get('x-user-id');
+    const sessionId = req.headers.get('x-session-id');
+
+    if (!userId) {
+      throw new AppError('User ID not found in request', {
+        code: ERROR_CODES.UNAUTHORIZED,
+        status: 401,
+      });
+    }
+
+    // Await params before using its properties
+    const resolvedParams = await params;
+    const { slug } = resolvedParams;
+
+    const orgLogger = withOrganizationContext(slug);
+
     orgLogger.debug('Fetching organization metrics');
 
     const { hasAccess, session } = await getOrganizationAccess(slug);
@@ -47,16 +59,6 @@ export async function GET(
         { message: 'You do not have access to this organization' },
         { status: 403 }
       );
-    }
-
-    const userId = request.headers.get('x-user-id');
-    const sessionId = request.headers.get('x-session-id');
-
-    if (!userId) {
-      throw new AppError('User ID not found in request', {
-        code: ERROR_CODES.UNAUTHORIZED,
-        status: 401,
-      });
     }
 
     const org = await db.query.organization.findFirst({
@@ -152,7 +154,19 @@ export async function GET(
 
     return Response.json(organizationMetricsSchema.parse(result));
   } catch (error) {
-    orgLogger.error('Error fetching organization metrics', {}, error);
+    // Get slug from params for error logging, handling the Promise
+    let slug = 'unknown';
+    try {
+      const resolvedParams = await params;
+      slug = resolvedParams.slug;
+    } catch (paramsError) {
+      logger.error('Error resolving params', { error: paramsError });
+    }
+
+    logger.error('Error fetching organization metrics', {
+      error,
+      slug,
+    });
 
     if (error instanceof AppError) {
       return Response.json(
