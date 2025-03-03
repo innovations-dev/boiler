@@ -6,6 +6,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import {
   organizationService,
@@ -81,10 +82,10 @@ export function useCreateOrganization() {
       metadata?: Record<string, any>;
     }) => organizationService.create(data),
     onSuccess: () => {
-      // Invalidate the organizations list query to refetch
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
+      toast.success('Organization created successfully');
     },
   });
 }
@@ -104,16 +105,13 @@ export function useUpdateOrganization() {
       metadata?: Record<string, any>;
     }) => organizationService.update(data),
     onSuccess: (_, variables) => {
-      // Invalidate the specific organization query to refetch
-      if (variables.slug) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.organizations.detail(variables.slug),
-        });
-      }
-      // Also invalidate the organizations list
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.detail(variables.slug || ''),
+      });
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
+      toast.success('Organization updated successfully');
     },
   });
 }
@@ -127,10 +125,10 @@ export function useDeleteOrganization() {
   return useMutation({
     mutationFn: (id: string) => organizationService.delete(id),
     onSuccess: () => {
-      // Invalidate the organizations list query to refetch
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
+      toast.success('Organization deleted successfully');
     },
   });
 }
@@ -139,8 +137,15 @@ export function useDeleteOrganization() {
  * Hook to set the active organization
  */
 export function useSetActiveOrganization() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (id: string) => organizationService.setActive(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.session.current(),
+      });
+    },
   });
 }
 
@@ -155,19 +160,88 @@ export function useInviteMember() {
       organizationId: string;
       email: string;
       role: 'ADMIN' | 'MEMBER';
-      slug: string;
     }) => organizationService.inviteMember(data),
     onSuccess: (_, variables) => {
-      // Invalidate the specific organization query to refetch
       queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.detail(variables.slug),
+        queryKey: queryKeys.organizations.invitations.all(
+          variables.organizationId
+        ),
       });
-
-      // Invalidate members
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.members.all(variables.slug),
-      });
+      toast.success('Invitation sent successfully');
     },
+  });
+}
+
+/**
+ * Hook to cancel an invitation
+ */
+export function useCancelInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => organizationService.cancelInvitation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
+      });
+      toast.success('Invitation cancelled successfully');
+    },
+  });
+}
+
+/**
+ * Hook to accept an invitation
+ */
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (token: string) => organizationService.acceptInvitation(token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
+      });
+      toast.success('Invitation accepted successfully');
+    },
+  });
+}
+
+/**
+ * Hook to get an invitation
+ */
+export function useInvitation(token: string) {
+  return useQuery({
+    queryKey: queryKeys.organizations.invitations.detail(token),
+    queryFn: () => organizationService.getInvitation(token),
+    enabled: !!token,
+  });
+}
+
+/**
+ * Hook to reject an invitation
+ */
+export function useRejectInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (token: string) => organizationService.rejectInvitation(token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all(),
+      });
+      toast.success('Invitation rejected successfully');
+    },
+  });
+}
+
+/**
+ * Hook to check if a slug is available
+ */
+export function useCheckSlug(slug: string) {
+  return useQuery({
+    queryKey: ['organizations', 'check-slug', slug],
+    queryFn: () => organizationService.checkSlug(slug),
+    enabled: !!slug,
   });
 }
 
@@ -178,27 +252,19 @@ export function useRemoveMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: {
-      organizationId: string;
-      userId: string;
-      slug: string;
-    }) => organizationService.removeMember(data),
+    mutationFn: (data: { organizationId: string; userId: string }) =>
+      organizationService.removeMember(data),
     onSuccess: (_, variables) => {
-      // Invalidate the specific organization query to refetch
       queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.detail(variables.slug),
+        queryKey: queryKeys.organizations.members.all(variables.organizationId),
       });
-
-      // Invalidate members
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.members.all(variables.slug),
-      });
+      toast.success('Member removed successfully');
     },
   });
 }
 
 /**
- * Hook to update a member's role in an organization
+ * Hook to update a member's role
  */
 export function useUpdateMemberRole() {
   const queryClient = useQueryClient();
@@ -208,18 +274,12 @@ export function useUpdateMemberRole() {
       organizationId: string;
       userId: string;
       role: 'ADMIN' | 'MEMBER';
-      slug: string;
     }) => organizationService.updateMemberRole(data),
     onSuccess: (_, variables) => {
-      // Invalidate the specific organization query to refetch
       queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.detail(variables.slug),
+        queryKey: queryKeys.organizations.members.all(variables.organizationId),
       });
-
-      // Invalidate members
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.members.all(variables.slug),
-      });
+      toast.success('Member role updated successfully');
     },
   });
 }
@@ -231,18 +291,33 @@ export function useLeaveOrganization() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { organizationId: string; slug: string }) =>
-      organizationService.leave(data.organizationId),
-    onSuccess: (_, variables) => {
-      // Invalidate the organizations list query to refetch
+    mutationFn: (organizationId: string) =>
+      organizationService.leave(organizationId),
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.organizations.all(),
       });
-
-      // Invalidate the specific organization
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.organizations.detail(variables.slug),
-      });
+      toast.success('Left organization successfully');
     },
+  });
+}
+
+/**
+ * Hook to check if a user has a specific permission
+ */
+export function useHasPermission(data: {
+  organizationId: string;
+  resourceType: string;
+  resourceId: string;
+  permission: string;
+}) {
+  return useQuery({
+    queryKey: ['organizations', 'has-permission', data],
+    queryFn: () => organizationService.hasPermission(data),
+    enabled:
+      !!data.organizationId &&
+      !!data.resourceType &&
+      !!data.resourceId &&
+      !!data.permission,
   });
 }
