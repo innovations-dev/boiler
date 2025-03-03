@@ -10,7 +10,7 @@ import {
   OrganizationWorkspace,
   UpdateWorkspaceRequest,
 } from '@/lib/domains/organization/types';
-import { useUpdateWorkspace } from '@/lib/hooks/use-organization-extensions';
+import { useUpdateWorkspace } from '@/lib/hooks/organizations';
 
 import { WorkspaceDialog } from './workspace-dialog';
 
@@ -55,12 +55,17 @@ export function EditWorkspaceDialog({
 
       const request: UpdateWorkspaceRequest = {
         id: workspace.id,
-        name: values.name,
         organizationId: values.organizationId,
+        name: values.name,
         updatedBy: session.user.id,
       };
 
-      await updateWorkspace(request);
+      await updateWorkspace({
+        organizationId: values.organizationId,
+        workspaceId: workspace.id,
+        name: values.name,
+        description: workspace.description,
+      });
 
       toast.success('Workspace updated successfully');
       setOpen(false);

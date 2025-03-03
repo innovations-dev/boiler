@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/auth/client';
 import { CreateWorkspaceRequest } from '@/lib/domains/organization/types';
-import { useCreateWorkspace } from '@/lib/hooks/use-organization-extensions';
+import { useCreateWorkspace } from '@/lib/hooks/organizations';
 
 import { WorkspaceDialog } from './workspace-dialog';
 

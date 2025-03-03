@@ -97,6 +97,44 @@ export const queryKeys = {
       detail: (id: string) => ['organizations', 'invitations', id] as const,
     },
     settings: (slug: string) => ['organizations', slug, 'settings'] as const,
+    /** Extensions for organization functionality */
+    extensions: {
+      /** All extension-related queries */
+      all: () => ['organization-extensions'] as const,
+      /** Get organization metrics by ID
+       * @param {string} organizationId - Organization ID
+       */
+      metrics: (organizationId: string) =>
+        ['organization-extensions', 'metrics', organizationId] as const,
+      /** Get organization activity by ID
+       * @param {string} organizationId - Organization ID
+       */
+      activity: (organizationId: string) =>
+        ['organization-extensions', 'activity', organizationId] as const,
+      /** Workspace-related queries */
+      workspaces: {
+        /** Get all workspaces for an organization
+         * @param {string} organizationId - Organization ID
+         */
+        all: (organizationId: string) =>
+          ['organization-extensions', 'workspaces', organizationId] as const,
+        /** Get workspace by ID
+         * @param {string} workspaceId - Workspace ID
+         */
+        detail: (workspaceId: string) =>
+          [
+            'organization-extensions',
+            'workspaces',
+            'detail',
+            workspaceId,
+          ] as const,
+      },
+      /** Get enhanced organization data by slug
+       * @param {string} slug - Organization slug
+       */
+      enhanced: (slug: string) =>
+        ['organization-extensions', 'enhanced', slug] as const,
+    },
   },
   /** Workspace-related query keys */
   workspaces: {

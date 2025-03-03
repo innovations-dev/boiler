@@ -17,45 +17,23 @@ import {
   OrganizationWorkspace,
   UpdateWorkspaceRequest,
 } from '@/lib/domains/organization/types';
-
-// Query keys
-export const organizationExtensionsKeys = {
-  all: ['organization-extensions'] as const,
-  metrics: (organizationId: string) =>
-    [...organizationExtensionsKeys.all, 'metrics', organizationId] as const,
-  activity: (organizationId: string) =>
-    [...organizationExtensionsKeys.all, 'activity', organizationId] as const,
-  workspaces: {
-    all: (organizationId: string) =>
-      [
-        ...organizationExtensionsKeys.all,
-        'workspaces',
-        organizationId,
-      ] as const,
-    detail: (workspaceId: string) =>
-      [
-        ...organizationExtensionsKeys.all,
-        'workspaces',
-        'detail',
-        workspaceId,
-      ] as const,
-  },
-  enhanced: (slug: string) =>
-    [...organizationExtensionsKeys.all, 'enhanced', slug] as const,
-};
+import { queryKeys } from '@/lib/query/keys';
 
 /**
  * Hook to fetch organization metrics
+ *
+ * @param organizationId - The ID of the organization
+ * @returns Query result with organization metrics
  */
 export function useOrganizationMetrics(organizationId: string) {
   return useQuery({
-    queryKey: ['organization', organizationId, 'metrics'],
+    queryKey: queryKeys.organizations.extensions.metrics(organizationId),
     queryFn: async () => {
       const response = await fetch(`/api/orgs/${organizationId}/metrics`);
       if (!response.ok) {
         throw new Error('Failed to fetch organization metrics');
       }
-      return response.json();
+      return response.json() as Promise<OrganizationMetrics>;
     },
     enabled: !!organizationId,
   });
@@ -63,13 +41,20 @@ export function useOrganizationMetrics(organizationId: string) {
 
 /**
  * Hook to fetch organization activity
+ *
+ * @param organizationId - The ID of the organization
+ * @param limit - The maximum number of activity items to fetch
+ * @returns Query result with organization activity
  */
 export function useOrganizationActivity(
   organizationId: string,
   limit: number = 10
 ) {
   return useQuery({
-    queryKey: ['organization', organizationId, 'activity', limit],
+    queryKey: [
+      ...queryKeys.organizations.extensions.activity(organizationId),
+      limit,
+    ],
     queryFn: async () => {
       const response = await fetch(
         `/api/orgs/${organizationId}/activity?limit=${limit}`
@@ -77,9 +62,51 @@ export function useOrganizationActivity(
       if (!response.ok) {
         throw new Error('Failed to fetch organization activity');
       }
-      return response.json();
+      return response.json() as Promise<OrganizationActivity[]>;
     },
     enabled: !!organizationId,
+  });
+}
+
+/**
+ * Hook to record organization activity
+ *
+ * @returns Mutation function for recording activity
+ */
+export function useRecordActivity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      organizationId,
+      type,
+      data,
+    }: {
+      organizationId: string;
+      type: string;
+      data?: Record<string, any>;
+    }) => {
+      const response = await fetch(`/api/orgs/${organizationId}/activity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, data }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to record activity');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.extensions.activity(
+          variables.organizationId
+        ),
+      });
+    },
   });
 }
 
@@ -91,13 +118,13 @@ export function useOrganizationActivity(
  */
 export function useOrganizationWorkspaces(organizationId: string) {
   return useQuery({
-    queryKey: ['organization', organizationId, 'workspaces'],
+    queryKey: queryKeys.organizations.extensions.workspaces.all(organizationId),
     queryFn: async () => {
       const response = await fetch(`/api/orgs/${organizationId}/workspaces`);
       if (!response.ok) {
         throw new Error('Failed to fetch organization workspaces');
       }
-      return response.json();
+      return response.json() as Promise<OrganizationWorkspace[]>;
     },
     enabled: !!organizationId,
   });
@@ -115,7 +142,10 @@ export function useOrganizationWorkspace(
   organizationId: string
 ) {
   return useQuery({
-    queryKey: ['organization', organizationId, 'workspace', workspaceId],
+    queryKey: [
+      ...queryKeys.organizations.extensions.workspaces.detail(workspaceId),
+      organizationId,
+    ],
     queryFn: async () => {
       const response = await fetch(
         `/api/orgs/${organizationId}/workspaces/${workspaceId}`
@@ -123,7 +153,7 @@ export function useOrganizationWorkspace(
       if (!response.ok) {
         throw new Error('Failed to fetch workspace');
       }
-      return response.json();
+      return response.json() as Promise<OrganizationWorkspace>;
     },
     enabled: !!workspaceId && !!organizationId,
   });
@@ -159,12 +189,15 @@ export function useCreateWorkspace() {
         throw new Error('Failed to create workspace');
       }
 
-      return response.json();
+      return response.json() as Promise<OrganizationWorkspace>;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ['organization', variables.organizationId, 'workspaces'],
+        queryKey: queryKeys.organizations.extensions.workspaces.all(
+          variables.organizationId
+        ),
       });
+      toast.success('Workspace created successfully');
     },
   });
 }
@@ -204,20 +237,27 @@ export function useUpdateWorkspace() {
         throw new Error('Failed to update workspace');
       }
 
-      return response.json();
+      return response.json() as Promise<OrganizationWorkspace>;
     },
     onSuccess: (_, variables) => {
+      // Invalidate the specific workspace query
       queryClient.invalidateQueries({
         queryKey: [
-          'organization',
+          ...queryKeys.organizations.extensions.workspaces.detail(
+            variables.workspaceId
+          ),
           variables.organizationId,
-          'workspace',
-          variables.workspaceId,
         ],
       });
+
+      // Invalidate the workspaces list query
       queryClient.invalidateQueries({
-        queryKey: ['organization', variables.organizationId, 'workspaces'],
+        queryKey: queryKeys.organizations.extensions.workspaces.all(
+          variables.organizationId
+        ),
       });
+
+      toast.success('Workspace updated successfully');
     },
   });
 }
@@ -252,64 +292,34 @@ export function useDeleteWorkspace() {
       return response.json();
     },
     onSuccess: (_, variables) => {
+      // Invalidate the workspaces list query
       queryClient.invalidateQueries({
-        queryKey: ['organization', variables.organizationId, 'workspaces'],
+        queryKey: queryKeys.organizations.extensions.workspaces.all(
+          variables.organizationId
+        ),
       });
+
+      toast.success('Workspace deleted successfully');
     },
   });
 }
 
 /**
  * Hook to fetch enhanced organization data
+ *
+ * @param slug - The slug of the organization
+ * @returns Query result with enhanced organization data
  */
 export function useEnhancedOrganization(slug: string) {
   return useQuery({
-    queryKey: organizationExtensionsKeys.enhanced(slug),
+    queryKey: queryKeys.organizations.extensions.enhanced(slug),
     queryFn: async () => {
-      const response = await fetch(
-        `/api/organizations-by-slug/${slug}/enhanced`
-      );
+      const response = await fetch(`/api/org/${slug}/enhanced`);
       if (!response.ok) {
         throw new Error('Failed to fetch enhanced organization data');
       }
       return response.json() as Promise<EnhancedOrganization>;
     },
     enabled: !!slug,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-}
-
-export function useRecordActivity() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      organizationId,
-      type,
-      data,
-    }: {
-      organizationId: string;
-      type: string;
-      data?: Record<string, any>;
-    }) => {
-      const response = await fetch(`/api/orgs/${organizationId}/activity`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type, data }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to record activity');
-      }
-
-      return response.json();
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ['organization', variables.organizationId, 'activity'],
-      });
-    },
   });
 }

@@ -32,12 +32,12 @@ import {
   UpdateWorkspaceRequest,
 } from '@/lib/domains/organization/types';
 import { handleUnknownError } from '@/lib/errors';
-import { useErrorHandler } from '@/lib/hooks/use-error-handler';
 import {
   useCreateWorkspace,
   useDeleteWorkspace,
   useUpdateWorkspace,
-} from '@/lib/hooks/use-organization-extensions';
+} from '@/lib/hooks/organizations';
+import { useErrorHandler } from '@/lib/hooks/use-error-handler';
 import { ErrorResponse } from '@/lib/types/responses/error';
 
 /**
