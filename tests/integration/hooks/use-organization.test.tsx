@@ -2,49 +2,47 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { nanoid } from 'nanoid';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  getOrganizationAction,
-  getUserOrganizationsAction,
-} from '@/app/_actions/organizations';
+import { organizationService } from '@/lib/better-auth/organization';
 import {
   useOrganization,
-  useUserOrganizations,
-} from '@/hooks/organizations/use-organization';
+  useOrganizations,
+} from '@/lib/hooks/organizations/use-better-auth-organization';
 import type { Response } from '@/lib/types/responses/base';
 import type { ErrorCode } from '@/lib/types/responses/error';
 
 import { renderWithProviders } from '../../utils/test-utils';
 
-// Mock server actions
-vi.mock('@/app/_actions/organizations', () => ({
-  getOrganizationAction: vi.fn(),
-  getUserOrganizationsAction: vi.fn(),
+// Mock organization service
+vi.mock('@/lib/better-auth/organization', () => ({
+  organizationService: {
+    getFullOrganization: vi.fn(),
+    list: vi.fn(),
+  },
 }));
 
 describe('Organization Hooks', () => {
   describe('useOrganization', () => {
     it('should fetch and return organization data', async () => {
       // Arrange
-      const orgId = nanoid();
+      const slug = 'test-org';
       const mockOrg = {
-        id: orgId,
+        id: nanoid(),
         name: 'Test Organization',
-        userId: nanoid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        slug: null,
-        logo: null,
-        metadata: null,
+        slug,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        logo: undefined,
+        metadata: {},
+        members: [],
       };
 
-      vi.mocked(getOrganizationAction).mockResolvedValueOnce({
-        success: true,
-        data: mockOrg,
-      });
+      vi.mocked(organizationService.getFullOrganization).mockResolvedValueOnce(
+        mockOrg
+      );
 
       // Act
       function TestComponent() {
-        const { data, isLoading } = useOrganization(orgId);
+        const { data, isLoading } = useOrganization(slug);
         if (isLoading) return <div>Loading...</div>;
         return <div>{data?.name}</div>;
       }
@@ -60,42 +58,15 @@ describe('Organization Hooks', () => {
 
     it('should handle error state', async () => {
       // Arrange
-      const orgId = nanoid();
-      const mockOrg = {
-        id: orgId,
-        name: 'Test Organization',
-        userId: nanoid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        slug: null,
-        logo: null,
-        metadata: null,
-      };
-      const errorResponse: Response<
-        | {
-            id: string;
-            name: string;
-            slug: string | null;
-            logo: string | null;
-            createdAt: Date;
-            updatedAt: Date;
-            metadata: string | null;
-          }
-        | undefined
-      > = {
-        success: false,
-        data: undefined,
-        error: {
-          message: 'Organization not found',
-          code: 'NOT_FOUND' as ErrorCode,
-          status: 404,
-        },
-      };
-      vi.mocked(getOrganizationAction).mockResolvedValueOnce(errorResponse);
+      const slug = 'test-org';
+
+      vi.mocked(organizationService.getFullOrganization).mockRejectedValueOnce(
+        new Error('Organization not found')
+      );
 
       // Act
       function TestComponent() {
-        const { error, isError } = useOrganization(orgId);
+        const { error, isError } = useOrganization(slug);
         if (isError) return <div>Error: {error.message}</div>;
         return null;
       }
@@ -111,41 +82,35 @@ describe('Organization Hooks', () => {
     });
   });
 
-  describe('useUserOrganizations', () => {
+  describe('useOrganizations', () => {
     it('should fetch and return user organizations', async () => {
       // Arrange
-      const userId = nanoid();
       const mockOrgs = [
         {
           id: nanoid(),
           name: 'Org 1',
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          slug: null,
-          logo: null,
-          metadata: null,
+          slug: 'org-1',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          logo: undefined,
+          metadata: {},
         },
         {
           id: nanoid(),
           name: 'Org 2',
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          slug: null,
-          logo: null,
-          metadata: null,
+          slug: 'org-2',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          logo: undefined,
+          metadata: {},
         },
       ];
 
-      vi.mocked(getUserOrganizationsAction).mockResolvedValueOnce({
-        success: true,
-        data: mockOrgs,
-      });
+      vi.mocked(organizationService.list).mockResolvedValueOnce(mockOrgs);
 
       // Act
       function TestComponent() {
-        const { data, isLoading } = useUserOrganizations(userId);
+        const { data, isLoading } = useOrganizations();
         if (isLoading) return <div>Loading...</div>;
         return (
           <div>{data?.map((org) => <div key={org.id}>{org.name}</div>)}</div>
@@ -164,15 +129,11 @@ describe('Organization Hooks', () => {
 
     it('should handle empty organizations list', async () => {
       // Arrange
-      const userId = nanoid();
-      vi.mocked(getUserOrganizationsAction).mockResolvedValueOnce({
-        success: true,
-        data: [],
-      });
+      vi.mocked(organizationService.list).mockResolvedValueOnce([]);
 
       // Act
       function TestComponent() {
-        const { data, isLoading } = useUserOrganizations(userId);
+        const { data, isLoading } = useOrganizations();
         if (isLoading) return <div>Loading...</div>;
         if (!data?.length) return <div>No organizations found</div>;
         return null;

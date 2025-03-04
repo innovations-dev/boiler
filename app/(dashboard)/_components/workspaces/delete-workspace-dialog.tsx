@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { OrganizationWorkspace } from '@/lib/domains/organization/types';
-import { useDeleteWorkspace } from '@/lib/hooks/organizations';
+import { useDeleteWorkspace } from '@/lib/hooks/organizations/use-organization-extensions';
 
 import { WorkspaceDialog } from './workspace-dialog';
 

@@ -1,6 +1,15 @@
+/**
+ * @fileoverview Organization detail page
+ *
+ * This page displays the organization dashboard.
+ */
+
 import { notFound } from 'next/navigation';
 
+import { OrganizationDashboard } from '@/app/(dashboard)/_components/organization/dashboard';
+import { OrganizationProvider } from '@/app/(dashboard)/_context/organization-context';
 import { OrganizationServiceImpl } from '@/lib/domains/organization/service-impl';
+import { handleUnknownError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
 interface OrganizationPageProps {
@@ -9,47 +18,51 @@ interface OrganizationPageProps {
   };
 }
 
+/**
+ * Organization detail page
+ */
 export default async function OrganizationPage({
-  params: { slug },
+  params,
 }: OrganizationPageProps) {
-  logger.debug('Organization page rendering', {
-    component: 'OrganizationPage',
-    slug,
-    timestamp: new Date().toISOString(),
-  });
+  const { slug } = await params;
 
   try {
-    const organizationService = new OrganizationServiceImpl();
-    const organization = await organizationService.getBySlug(slug);
+    // Initialize services
+    const service = new OrganizationServiceImpl();
+
+    // Get organization data
+    const organization = await service.getBySlug(slug);
 
     if (!organization) {
-      logger.debug('Organization not found', {
-        component: 'OrganizationPage',
-        slug,
-      });
-      notFound();
+      logger.warn('Organization not found', { slug });
+      return notFound();
     }
 
-    logger.debug('Organization fetched successfully', {
-      component: 'OrganizationPage',
+    // Find the current user's membership
+    const currentMember = organization.members?.[0];
+
+    logger.info('Organization page loaded successfully', {
+      slug,
       organizationId: organization.id,
-      name: organization.name,
-      slug: organization.slug,
+      memberCount: organization.members?.length || 0,
     });
 
     return (
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-4">{organization.name}</h1>
-        {/* Add your organization page content here */}
-      </div>
+      <OrganizationProvider
+        organization={organization}
+        currentMember={currentMember}
+      >
+        <OrganizationDashboard />
+      </OrganizationProvider>
     );
   } catch (error) {
-    logger.error('Error fetching organization:', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      component: 'OrganizationPage',
+    const appError = handleUnknownError(error);
+
+    logger.error('Failed to load organization page', {
+      error: appError,
       slug,
     });
-    notFound();
+
+    throw error;
   }
 }

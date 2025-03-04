@@ -1,7 +1,7 @@
 import { Session } from 'better-auth';
 import { UserWithRole } from 'better-auth/plugins';
 
-import { getActiveOrganization } from '@/lib/db/queries/organizations';
+import { organizationService } from '@/lib/better-auth/organization';
 import { logger } from '@/lib/logger';
 
 export async function customSession({
@@ -17,8 +17,8 @@ export async function customSession({
     // Don't log the entire session object as it may contain sensitive data
   });
   try {
-    const memberWithOrg = await getActiveOrganization(user.id);
-    const activeOrganization = memberWithOrg?.organization;
+    const member = await organizationService.getActiveMember(user.id);
+    const activeOrganizationId = member?.organizationId;
 
     // TODO: implement workspaces
     // const activeWorkspace = await getActiveWorkspace();
@@ -26,13 +26,13 @@ export async function customSession({
       context: 'auth config',
       component: 'customSession',
       userId: user?.id,
-      activeOrganizationId: activeOrganization?.id,
+      activeOrganizationId,
     });
 
     return {
       ...session,
       user,
-      activeOrganizationId: activeOrganization?.id,
+      activeOrganizationId,
       // TODO: implement workspaces
       // activeWorkspaceId: activeWorkspace?.id, // TODO: is this correct?
     };

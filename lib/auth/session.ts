@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Session validation and management for Next.js
+ *
+ * This module provides utilities for validating and managing user sessions
+ * in Next.js applications using Better-Auth.
+ */
+
+import { headers } from 'next/headers';
 import { type NextRequest } from 'next/server';
 
 import { auth } from '@/lib/auth';
-import { authClient } from '@/lib/auth/client';
-import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
 export interface Session {
@@ -19,6 +25,32 @@ interface DeviceSession {
   userId: string;
   isActive?: boolean;
   [key: string]: any;
+}
+
+/**
+ * Get headers from the request for authentication
+ *
+ * @param req The Next.js request object
+ * @param sessionCookie The session cookie if available
+ * @returns Headers object with authentication information
+ */
+function getAuthHeadersFromRequest(
+  req: NextRequest,
+  sessionCookie?: { name: string; value: string }
+): Headers {
+  const headersList = new Headers();
+
+  // Copy all headers from the request
+  req.headers.forEach((value, key) => {
+    headersList.set(key, value);
+  });
+
+  // Ensure the cookie header is set correctly
+  if (!headersList.has('cookie') && sessionCookie) {
+    headersList.set('Cookie', `${sessionCookie.name}=${sessionCookie.value}`);
+  }
+
+  return headersList;
 }
 
 /**
@@ -66,30 +98,18 @@ export async function validateSession(
     });
 
     // Following Better-Auth's recommended approach for session validation
-    // Pass the entire request headers to auth.api.getSession
     try {
       logger.debug('Validating session with auth.api.getSession', {
         component: 'SessionValidation',
         path: pathname,
       });
 
-      // Create headers object from the request
-      const headers = new Headers();
-
-      // Copy all headers from the request
-      req.headers.forEach((value, key) => {
-        headers.set(key, value);
-      });
-
-      // Ensure the cookie header is set correctly
-      if (!headers.has('cookie') && sessionCookie) {
-        headers.set('Cookie', `${sessionCookie.name}=${sessionCookie.value}`);
-      }
+      // Get headers from the request
+      const headersList = getAuthHeadersFromRequest(req, sessionCookie);
 
       // Use auth.api.getSession as recommended in the documentation
-      // @ts-ignore - Better-Auth types are not up to date
       const session = await auth.api.getSession({
-        headers,
+        headers: headersList,
         // Disable cookie cache to ensure we're getting the latest session data
         query: {
           disableCookieCache: true,

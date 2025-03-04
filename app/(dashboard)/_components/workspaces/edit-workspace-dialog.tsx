@@ -10,7 +10,7 @@ import {
   OrganizationWorkspace,
   UpdateWorkspaceRequest,
 } from '@/lib/domains/organization/types';
-import { useUpdateWorkspace } from '@/lib/hooks/organizations';
+import { useUpdateWorkspace } from '@/lib/hooks/organizations/use-organization-extensions';
 
 import { WorkspaceDialog } from './workspace-dialog';
 

@@ -1,37 +1,28 @@
+/**
+ * @fileoverview Organization context provider and hooks using Better-Auth
+ */
+
 'use client';
 
-/**
- * @fileoverview Organization context provider and hooks
- * @module lib/context/organization
- * @deprecated This context provider uses legacy organization types and will be replaced with a Better-Auth based implementation.
- * Please use the Better-Auth hooks directly in new components.
- */
 import { createContext, useCallback, useContext, useMemo } from 'react';
 
 import {
-  Organization as BetterAuthOrganization,
-  OrganizationMember as BetterAuthOrganizationMember,
-} from '@/lib/better-auth/organization';
-import { Organization, OrganizationRole } from '@/lib/db/_schema';
-import {
+  Organization,
   OrganizationMember,
-  OrganizationPermission,
-  ROLE_PERMISSIONS,
-} from '@/lib/db/_schema/organization';
+} from '@/lib/better-auth/organization';
 import { AppError } from '@/lib/errors';
+import {
+  useOrganization as useBetterAuthOrganization,
+  useHasPermission,
+  useOrganizationMember,
+} from '@/lib/hooks/organizations/use-better-auth-organization';
 import { ERROR_CODES } from '@/lib/types/responses/error';
 
-// Type adapter to ensure compatibility between Better-Auth and legacy types
-type CompatibleOrganization = Organization | BetterAuthOrganization;
-type CompatibleOrganizationMember =
-  | OrganizationMember
-  | BetterAuthOrganizationMember;
-
 interface OrganizationContextValue {
-  organization: CompatibleOrganization;
-  currentMember: CompatibleOrganizationMember;
-  hasPermission: (permission: OrganizationPermission) => boolean;
-  isRole: (role: OrganizationRole) => boolean;
+  organization: Organization;
+  currentMember: OrganizationMember;
+  hasPermission: (permission: string) => boolean;
+  isRole: (role: string) => boolean;
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | null>(
@@ -39,45 +30,60 @@ const OrganizationContext = createContext<OrganizationContextValue | null>(
 );
 
 interface OrganizationProviderProps {
-  organization: CompatibleOrganization;
-  currentMember: CompatibleOrganizationMember;
+  organization: Organization;
+  currentMember: OrganizationMember;
   children: React.ReactNode;
 }
 
 /**
  * Organization context provider
- * @deprecated This provider uses legacy organization types and will be replaced with a Better-Auth based implementation.
- * Please use the Better-Auth hooks directly in new components.
  */
 export function OrganizationProvider({
   organization,
   currentMember,
   children,
 }: OrganizationProviderProps) {
-  // Adapt the role from Better-Auth format to legacy format if needed
-  const memberRole = (
-    currentMember.role as string
-  ).toUpperCase() as OrganizationRole;
-
   /**
-   * Check if the user has a specific permission
-   * @deprecated This uses legacy permission checking logic. In the future, use Better-Auth permission checking.
+   * Check if the current user has a specific permission in the organization
+   * Using the Better-Auth permission system
+   *
+   * Note: For immediate UI decisions, we use role-based defaults
+   * For accurate permission checks, use the useCheckPermission hook
    */
   const hasPermission = useCallback(
-    (permission: OrganizationPermission) => {
-      const rolePermissions = ROLE_PERMISSIONS[memberRole];
-      return rolePermissions?.includes(permission) || false;
+    (permission: string) => {
+      if (!organization?.id) return false;
+
+      // Role-based permission logic for immediate UI decisions
+      // This is a fallback for synchronous permission checks
+      if (currentMember.role === 'OWNER') return true;
+
+      if (currentMember.role === 'ADMIN') {
+        const ownerOnlyPermissions = [
+          'delete_organization',
+          'transfer_ownership',
+        ];
+        return !ownerOnlyPermissions.includes(permission);
+      }
+
+      if (currentMember.role === 'MEMBER') {
+        const memberPermissions = [
+          'view_organization',
+          'view_members',
+          'create_content',
+          'edit_own_content',
+        ];
+        return memberPermissions.includes(permission);
+      }
+
+      return false;
     },
-    [memberRole]
+    [organization?.id, currentMember.role]
   );
 
-  /**
-   * Check if the user has a specific role
-   * @deprecated This uses legacy role checking logic. In the future, use Better-Auth role checking.
-   */
   const isRole = useCallback(
-    (role: OrganizationRole) => memberRole === role,
-    [memberRole]
+    (role: string) => currentMember.role === role,
+    [currentMember.role]
   );
 
   const value = useMemo(
@@ -98,10 +104,7 @@ export function OrganizationProvider({
 }
 
 /**
- * Hook to access the organization context
- * @returns The organization context value
- * @throws {AppError} If used outside of an OrganizationProvider
- * @deprecated This hook uses legacy organization types. In the future, use Better-Auth hooks directly.
+ * Hook to access organization context
  */
 export function useOrganization() {
   const context = useContext(OrganizationContext);
@@ -119,23 +122,21 @@ export function useOrganization() {
   return context;
 }
 
-/**
- * Hook to access organization permissions
- * @returns The hasPermission and isRole functions
- * @deprecated This hook uses legacy permission checking logic. In the future, use Better-Auth permission checking.
- */
 export function useOrganizationPermissions() {
   const { hasPermission, isRole } = useOrganization();
   return { hasPermission, isRole };
 }
 
 /**
- * Hook to require a specific permission
- * @param permission The permission to require
- * @throws {AppError} If the user does not have the required permission
- * @deprecated This hook uses legacy permission checking logic. In the future, use Better-Auth permission checking.
+ * Hook to check if the current user has a specific permission
+ * This uses the Better-Auth permission system for accurate permission checking
  */
-export function useRequirePermission(permission: OrganizationPermission) {
+export function useCheckPermission(permission: string) {
+  const { organization } = useOrganization();
+  return useHasPermission(organization.id, permission);
+}
+
+export function useRequirePermission(permission: string) {
   const { hasPermission } = useOrganization();
 
   if (!hasPermission(permission)) {

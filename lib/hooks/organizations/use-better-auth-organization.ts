@@ -51,20 +51,17 @@ export function useOrganizationMember(organizationId: string, slug: string) {
 
 /**
  * Hook to check if the current user has a specific permission in an organization
+ * This is the recommended pattern from Better-Auth for checking permissions
  */
-export function useOrganizationPermission(
-  organizationId: string,
-  permission: string,
-  slug: string
-) {
+export function useHasPermission(organizationId: string, permission: string) {
   return useQuery({
-    queryKey: ['organizations', slug, 'permissions', permission],
+    queryKey: queryKeys.organizations.permissions(organizationId, permission),
     queryFn: () =>
       organizationService.hasPermission({
         organizationId,
         permission,
       }),
-    enabled: !!organizationId && !!permission && !!slug,
+    enabled: !!organizationId && !!permission,
   });
 }
 
@@ -299,26 +296,6 @@ export function useLeaveOrganization() {
       });
       toast.success('Left organization successfully');
     },
-  });
-}
-
-/**
- * Hook to check if a user has a specific permission
- */
-export function useHasPermission(data: {
-  organizationId: string;
-  resourceType: string;
-  resourceId: string;
-  permission: string;
-}) {
-  return useQuery({
-    queryKey: ['organizations', 'has-permission', data],
-    queryFn: () => organizationService.hasPermission(data),
-    enabled:
-      !!data.organizationId &&
-      !!data.resourceType &&
-      !!data.resourceId &&
-      !!data.permission,
   });
 }
 

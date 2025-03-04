@@ -6,12 +6,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useSession } from '@/lib/auth/client';
+import type { Organization } from '@/lib/better-auth/organization';
 import {
   useCreateOrganization,
-  useUserOrganizations,
-} from '@/hooks/organizations/use-organization';
-import { useSession } from '@/lib/auth/client';
-import type { Organization } from '@/lib/db/_schema';
+  useOrganizations,
+} from '@/lib/hooks/organizations/use-better-auth-organization';
 import { slugify } from '@/lib/utils';
 
 interface OrganizationTestClientProps {
@@ -23,9 +23,7 @@ export function OrganizationTestClient({
 }: OrganizationTestClientProps) {
   const { data: session } = useSession();
   const [name, setName] = useState('');
-  const { data: organizations, isError: orgLoadError } = useUserOrganizations(
-    session?.user?.id ?? ''
-  );
+  const { data: organizations, isError: orgLoadError } = useOrganizations();
   const createOrg = useCreateOrganization();
 
   const handleCreate = async () => {
@@ -44,7 +42,6 @@ export function OrganizationTestClient({
         {
           name,
           slug: slugify(name),
-          userId: session.user.id,
         },
         {
           onError: (error) => {

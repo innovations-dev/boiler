@@ -6,11 +6,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useSession } from '@/lib/auth/client';
 import {
   useCreateOrganization,
-  useUserOrganizations,
-} from '@/hooks/organizations/use-organization';
-import { useSession } from '@/lib/auth/client';
+  useOrganizations,
+} from '@/lib/hooks/organizations/use-better-auth-organization';
 
 export default function TestReactQueryPage() {
   const { data: session } = useSession();
@@ -20,7 +20,7 @@ export default function TestReactQueryPage() {
     data: organizations,
     isLoading: isLoadingOrgs,
     error: orgsError,
-  } = useUserOrganizations(session?.user?.id ?? '');
+  } = useOrganizations();
 
   const {
     mutate: createOrg,
@@ -33,7 +33,7 @@ export default function TestReactQueryPage() {
     createOrg(
       {
         name,
-        userId: session.user.id,
+        slug: name.toLowerCase().replace(/\s+/g, '-'),
       },
       {
         onSuccess: () => {
@@ -79,6 +79,9 @@ export default function TestReactQueryPage() {
               <div key={org.id} className="p-4 border rounded">
                 <h3 className="font-medium">{org.name}</h3>
                 <p className="text-sm text-muted-foreground">ID: {org.id}</p>
+                <p className="text-sm text-muted-foreground">
+                  Slug: {org.slug || 'N/A'}
+                </p>
               </div>
             ))}
           </div>

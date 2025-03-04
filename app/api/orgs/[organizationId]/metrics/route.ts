@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@/lib/auth';
 import { validateSession } from '@/lib/auth/session';
-import { DbOrganizationExtensionsRepository } from '@/lib/domains/organization/repository-impl';
+import { OrganizationExtensionsRepositoryImpl } from '@/lib/domains/organization/repository-impl';
 import { OrganizationExtensionsServiceImpl } from '@/lib/domains/organization/service-impl';
 import {
   PermissionLevel,
@@ -29,7 +28,7 @@ export async function GET(
     const { organizationId } = params;
 
     // Initialize the repository and service
-    const repository = new DbOrganizationExtensionsRepository();
+    const repository = new OrganizationExtensionsRepositoryImpl();
     const service = new OrganizationExtensionsServiceImpl(repository);
 
     // Check if user has permission to view organization metrics

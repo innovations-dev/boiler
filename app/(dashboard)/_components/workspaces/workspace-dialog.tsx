@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { ReactNode } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -26,19 +26,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  CreateWorkspaceRequest,
-  OrganizationWorkspace,
-  UpdateWorkspaceRequest,
-} from '@/lib/domains/organization/types';
-import { handleUnknownError } from '@/lib/errors';
-import {
-  useCreateWorkspace,
-  useDeleteWorkspace,
-  useUpdateWorkspace,
-} from '@/lib/hooks/organizations';
 import { useErrorHandler } from '@/lib/hooks/use-error-handler';
-import { ErrorResponse } from '@/lib/types/responses/error';
 
 /**
  * Workspace form schema
@@ -57,7 +45,7 @@ type WorkspaceFormValues = z.infer<typeof workspaceFormSchema>;
  * Props for the WorkspaceDialog component
  */
 interface WorkspaceDialogProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -81,7 +69,7 @@ export function WorkspaceDialog({
  * Props for the WorkspaceDialog.Trigger component
  */
 interface WorkspaceDialogTriggerProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 /**
@@ -99,7 +87,7 @@ WorkspaceDialog.Trigger = function WorkspaceDialogTrigger({
 interface WorkspaceDialogContentProps {
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
@@ -29,15 +29,8 @@ export default async function OrganizationsIndexPage() {
       headersObj.set(key, value);
     });
 
-    // Add cookie header if it's not already present
-    const cookieStore = cookies();
-    if (cookieStore && !headersObj.has('cookie')) {
-      headersObj.set('Cookie', cookieStore.toString());
-    }
-
-    // @ts-ignore - Better-Auth types are not up to date
     session = await auth.api.getSession({
-      headers: headersObj,
+      headers: await headers(),
     });
 
     logger.debug('Organizations index page session check', {

@@ -5,11 +5,22 @@
  * It handles authentication, error handling, and response parsing.
  */
 
-import { headers } from 'next/headers';
-
 import { logger } from '@/lib/logger';
 
 import { betterAuthClient, handleBetterFetchError } from './client';
+
+// Import headers dynamically to avoid build errors
+// This function will safely get headers in a server context or return empty headers in client context
+const getHeaders = async () => {
+  try {
+    // Dynamic import to avoid build errors
+    const { headers } = await import('next/headers');
+    return headers();
+  } catch (error) {
+    // We're in a client component, return empty headers
+    return {};
+  }
+};
 
 // Organization types
 export interface Organization {
@@ -58,15 +69,24 @@ export const organizationService = {
   /**
    * Create a new organization
    */
-  async create(data: {
-    name: string;
-    slug?: string;
-    logo?: string;
-    metadata?: Record<string, any>;
-  }): Promise<Organization> {
+  async create(
+    data: {
+      name: string;
+      slug?: string;
+      logo?: string;
+      metadata?: Record<string, any>;
+    },
+    options?: { headers?: HeadersInit }
+  ): Promise<Organization> {
+    // Get headers safely regardless of client or server context
+    const headerValues = options?.headers || (await getHeaders());
+
     const response = await betterAuthClient.post<Organization>(
       '/organization/create',
-      data
+      data,
+      {
+        headers: headerValues,
+      }
     );
 
     if (!response.success) {
@@ -79,16 +99,25 @@ export const organizationService = {
   /**
    * Update an organization
    */
-  async update(data: {
-    id: string;
-    name?: string;
-    slug?: string;
-    logo?: string;
-    metadata?: Record<string, any>;
-  }): Promise<Organization> {
+  async update(
+    data: {
+      id: string;
+      name?: string;
+      slug?: string;
+      logo?: string;
+      metadata?: Record<string, any>;
+    },
+    options?: { headers?: HeadersInit }
+  ): Promise<Organization> {
+    // Get headers safely regardless of client or server context
+    const headerValues = options?.headers || (await getHeaders());
+
     const response = await betterAuthClient.post<Organization>(
       '/organization/update',
-      data
+      data,
+      {
+        headers: headerValues,
+      }
     );
 
     if (!response.success) {
@@ -101,10 +130,17 @@ export const organizationService = {
   /**
    * Delete an organization
    */
-  async delete(id: string): Promise<void> {
-    const response = await betterAuthClient.post<void>('/organization/delete', {
-      id,
-    });
+  async delete(id: string, options?: { headers?: HeadersInit }): Promise<void> {
+    // Get headers safely regardless of client or server context
+    const headerValues = options?.headers || (await getHeaders());
+
+    const response = await betterAuthClient.post<void>(
+      '/organization/delete',
+      { id },
+      {
+        headers: headerValues,
+      }
+    );
 
     if (!response.success) {
       handleBetterFetchError(response);
@@ -114,10 +150,19 @@ export const organizationService = {
   /**
    * Set active organization
    */
-  async setActive(id: string): Promise<void> {
+  async setActive(
+    id: string,
+    options?: { headers?: HeadersInit }
+  ): Promise<void> {
+    // Get headers safely regardless of client or server context
+    const headerValues = options?.headers || (await getHeaders());
+
     const response = await betterAuthClient.post<void>(
       '/organization/set-active',
-      { id }
+      { id },
+      {
+        headers: headerValues,
+      }
     );
 
     if (!response.success) {
@@ -128,9 +173,18 @@ export const organizationService = {
   /**
    * Get full organization details
    */
-  async getFullOrganization(slug: string): Promise<OrganizationWithMembers> {
+  async getFullOrganization(
+    slug: string,
+    options?: { headers?: HeadersInit }
+  ): Promise<OrganizationWithMembers> {
+    // Get headers safely regardless of client or server context
+    const headerValues = options?.headers || (await getHeaders());
+
     const response = await betterAuthClient.get<OrganizationWithMembers>(
-      `/organization/get-full-organization?slug=${encodeURIComponent(slug)}`
+      `/organization/get-full-organization?slug=${encodeURIComponent(slug)}`,
+      {
+        headers: headerValues,
+      }
     );
 
     if (!response.success) {
@@ -146,14 +200,15 @@ export const organizationService = {
    * In server components, this method will use the cookies from the request context.
    * In client components, it will use the cookies from the browser.
    */
-  async list(): Promise<Organization[]> {
+  async list(options?: { headers?: HeadersInit }): Promise<Organization[]> {
     try {
-      // Check if we're in a server component by trying to access cookies()
+      // Get headers safely regardless of client or server context
+      const headerValues = options?.headers || (await getHeaders());
 
       const response = await betterAuthClient.get<Organization[]>(
         '/organization/list',
         {
-          headers: await headers(),
+          headers: headerValues,
         }
       );
 

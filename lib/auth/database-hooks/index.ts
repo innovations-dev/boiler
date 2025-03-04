@@ -2,11 +2,8 @@ import type { BetterAuthOptions, Session } from 'better-auth';
 import { UserWithRole } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 
+import { organizationService } from '@/lib/better-auth/organization';
 import { db } from '@/lib/db';
-import {
-  createPersonalOrganization,
-  setActiveOrganization,
-} from '@/lib/db/queries/organizations';
 import { member } from '@/lib/db/schema';
 import { logger } from '@/lib/logger';
 
@@ -27,7 +24,10 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
           // If the user doesn't have an existing organization, create a new personal one
           const org =
             existingMember?.organization ||
-            (await createPersonalOrganization(betterAuthSession.userId));
+            (await organizationService.create({
+              name: 'Personal Organization',
+              slug: `personal-${betterAuthSession.userId}`,
+            }));
 
           logger.debug('session:create:after ~ Setting active organization', {
             userId: betterAuthSession.userId,
@@ -37,10 +37,7 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
           });
 
           // Set the active organization by updating the session table
-          await setActiveOrganization({
-            sessionId: betterAuthSession.id,
-            organizationId: org.id,
-          });
+          await organizationService.setActive(org.id);
 
           return;
         } catch (error) {
@@ -63,7 +60,10 @@ export const databaseHooks: BetterAuthOptions['databaseHooks'] = {
   user: {
     create: {
       after: async (user: UserWithRole) => {
-        await createPersonalOrganization(user.id);
+        await organizationService.create({
+          name: 'Personal Organization',
+          slug: `personal-${user.id}`,
+        });
       },
     },
   },

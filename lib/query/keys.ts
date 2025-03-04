@@ -96,6 +96,12 @@ export const queryKeys = {
       all: (slug: string) => ['organizations', slug, 'invitations'] as const,
       detail: (id: string) => ['organizations', 'invitations', id] as const,
     },
+    /** Permission-related query keys
+     * @param {string} organizationId - Organization ID
+     * @param {string} permission - Permission to check
+     */
+    permissions: (organizationId: string, permission: string) =>
+      ['organizations', organizationId, 'permissions', permission] as const,
     settings: (slug: string) => ['organizations', slug, 'settings'] as const,
     /** Extensions for organization functionality */
     extensions: {

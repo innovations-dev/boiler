@@ -46,6 +46,34 @@ import {
 } from './types';
 
 /**
+ * Standardized error handling for organization services
+ * @param error The error to handle
+ * @param context The context in which the error occurred
+ * @throws Always throws an error with a standardized message
+ */
+function handleServiceError(error: unknown, context: string): never {
+  if (error instanceof z.ZodError) {
+    logger.error(`Invalid ${context} data:`, {
+      errors: error.errors,
+    });
+    throw new Error(`Invalid ${context} data`);
+  }
+
+  if (error instanceof Error && error.name === 'ZodError') {
+    logger.error(`Invalid ${context} data:`, {
+      error: error.message,
+    });
+    throw new Error(`Invalid ${context} data`);
+  }
+
+  logger.error(`Error in ${context}:`, {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+  throw new Error(`Failed to ${context}`);
+}
+
+/**
  * Implementation of the base OrganizationService
  */
 export class OrganizationServiceImpl implements OrganizationService {
@@ -77,11 +105,7 @@ export class OrganizationServiceImpl implements OrganizationService {
       const headers = await this.getSessionHeaders();
       return await betterAuthOrganizationService.list();
     } catch (error) {
-      logger.error('Error listing organizations:', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw new Error('Failed to list organizations');
+      handleServiceError(error, 'list organizations');
     }
   }
 
@@ -91,11 +115,7 @@ export class OrganizationServiceImpl implements OrganizationService {
       const headers = await this.getSessionHeaders();
       return await betterAuthOrganizationService.getFullOrganization(slug);
     } catch (error) {
-      logger.error(`Error getting organization by slug ${slug}:`, {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw new Error('Failed to get organization');
+      handleServiceError(error, `get organization by slug ${slug}`);
     }
   }
 
@@ -114,19 +134,7 @@ export class OrganizationServiceImpl implements OrganizationService {
       const headers = await this.getSessionHeaders();
       return await betterAuthOrganizationService.create(validatedData);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        logger.error('Invalid organization data:', {
-          errors: error.errors,
-          data,
-        });
-        throw new Error('Invalid organization data');
-      }
-
-      logger.error('Error creating organization:', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw new Error('Failed to create organization');
+      handleServiceError(error, 'organization');
     }
   }
 
@@ -146,19 +154,7 @@ export class OrganizationServiceImpl implements OrganizationService {
       const headers = await this.getSessionHeaders();
       return await betterAuthOrganizationService.update(validatedData);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        logger.error('Invalid organization update data:', {
-          errors: error.errors,
-          data,
-        });
-        throw new Error('Invalid organization update data');
-      }
-
-      logger.error(`Error updating organization ${data.id}:`, {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw new Error('Failed to update organization');
+      handleServiceError(error, 'organization update');
     }
   }
 
@@ -168,11 +164,7 @@ export class OrganizationServiceImpl implements OrganizationService {
       const headers = await this.getSessionHeaders();
       await betterAuthOrganizationService.delete(id);
     } catch (error) {
-      logger.error(`Error deleting organization ${id}:`, {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw new Error('Failed to delete organization');
+      handleServiceError(error, `delete organization ${id}`);
     }
   }
 
@@ -182,11 +174,7 @@ export class OrganizationServiceImpl implements OrganizationService {
       const headers = await this.getSessionHeaders();
       await betterAuthOrganizationService.setActive(id);
     } catch (error) {
-      logger.error(`Error setting active organization ${id}:`, {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw new Error('Failed to set active organization');
+      handleServiceError(error, `set active organization ${id}`);
     }
   }
 }
