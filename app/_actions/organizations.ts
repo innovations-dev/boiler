@@ -1,6 +1,8 @@
 'use server';
 
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 import { createAction } from '@/lib/actions/create-action';
 import { organizationService } from '@/lib/better-auth/organization';
@@ -19,6 +21,7 @@ import {
   updateOrganizationSettings,
 } from '@/lib/db/queries/organizations';
 import { logger } from '@/lib/logger';
+import { OrganizationServiceImpl } from '@/lib/domains/organization/service-impl';
 
 // Define Response type
 interface Response<T = unknown> {
@@ -318,5 +321,138 @@ export async function updateOrganizationSettingsAction(
             : 'Failed to update organization settings',
       },
     };
+  }
+}
+
+export async function createOrganization(data: {
+  name: string;
+  slug?: string;
+  logo?: string;
+  metadata?: Record<string, any>;
+}) {
+  logger.debug('Creating organization', {
+    component: 'createOrganization',
+    name: data.name,
+    slug: data.slug,
+  });
+
+  try {
+    const organizationService = new OrganizationServiceImpl();
+    const organization = await organizationService.create(data);
+
+    logger.debug('Organization created successfully', {
+      component: 'createOrganization',
+      organizationId: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+    });
+
+    revalidatePath('/organizations');
+    redirect(`/organizations/${organization.slug}`);
+  } catch (error) {
+    logger.error('Error creating organization:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      component: 'createOrganization',
+      name: data.name,
+      slug: data.slug,
+    });
+    throw error;
+  }
+}
+
+export async function updateOrganization(data: {
+  id: string;
+  name?: string;
+  slug?: string;
+  logo?: string;
+  metadata?: Record<string, any>;
+}) {
+  logger.debug('Updating organization', {
+    component: 'updateOrganization',
+    organizationId: data.id,
+    name: data.name,
+    slug: data.slug,
+  });
+
+  try {
+    const organizationService = new OrganizationServiceImpl();
+    const organization = await organizationService.update(data);
+
+    logger.debug('Organization updated successfully', {
+      component: 'updateOrganization',
+      organizationId: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+    });
+
+    revalidatePath('/organizations');
+    revalidatePath(`/organizations/${organization.slug}`);
+    revalidatePath(`/organizations/${organization.slug}/settings`);
+  } catch (error) {
+    logger.error('Error updating organization:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      component: 'updateOrganization',
+      organizationId: data.id,
+      name: data.name,
+      slug: data.slug,
+    });
+    throw error;
+  }
+}
+
+export async function deleteOrganization(id: string) {
+  logger.debug('Deleting organization', {
+    component: 'deleteOrganization',
+    organizationId: id,
+  });
+
+  try {
+    const organizationService = new OrganizationServiceImpl();
+    await organizationService.delete(id);
+
+    logger.debug('Organization deleted successfully', {
+      component: 'deleteOrganization',
+      organizationId: id,
+    });
+
+    revalidatePath('/organizations');
+    redirect('/organizations');
+  } catch (error) {
+    logger.error('Error deleting organization:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      component: 'deleteOrganization',
+      organizationId: id,
+    });
+    throw error;
+  }
+}
+
+export async function setActiveOrganization(organizationId: string) {
+  logger.debug('Setting active organization', {
+    component: 'setActiveOrganization',
+    organizationId,
+  });
+
+  try {
+    const organizationService = new OrganizationServiceImpl();
+    await organizationService.setActive(organizationId);
+
+    logger.debug('Active organization set successfully', {
+      component: 'setActiveOrganization',
+      organizationId,
+    });
+
+    revalidatePath('/organizations');
+  } catch (error) {
+    logger.error('Error setting active organization:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      component: 'setActiveOrganization',
+      organizationId,
+    });
+    throw error;
   }
 }

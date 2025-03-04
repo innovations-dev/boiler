@@ -7,6 +7,35 @@ import { z } from 'zod';
 
 import { organizationRoleSchema } from './index';
 
+// ===== Organization Schemas =====
+
+export const createOrganizationSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  slug: z
+    .string()
+    .min(1, 'Slug is required')
+    .regex(
+      /^[a-z0-9-]+$/,
+      'Slug must contain only lowercase letters, numbers, and hyphens'
+    ),
+  logo: z.string().url().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export type CreateOrganizationRequest = z.infer<
+  typeof createOrganizationSchema
+>;
+
+export const updateOrganizationSchema = createOrganizationSchema
+  .partial()
+  .extend({
+    id: z.string().min(1, 'Organization ID is required'),
+  });
+
+export type UpdateOrganizationRequest = z.infer<
+  typeof updateOrganizationSchema
+>;
+
 // ===== Additional Schemas =====
 
 // Organization member schema
@@ -24,12 +53,55 @@ export type OrganizationMember = z.infer<typeof organizationMemberSchema>;
 // Organization metrics schema
 export const organizationMetricsSchema = z.object({
   totalMembers: z.number().int().min(0),
-  activeSessions: z.number().int().min(0),
+  activeMembers: z.number().int().min(0),
   pendingInvitations: z.number().int().min(0),
+  activeSessions: z.number().int().min(0),
   lastActivityAt: z.date(),
 });
 
 export type OrganizationMetrics = z.infer<typeof organizationMetricsSchema>;
+
+// Organization activity schema
+export const organizationActivitySchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  userId: z.string(),
+  type: z.enum([
+    'member_added',
+    'member_removed',
+    'member_role_updated',
+    'organization_updated',
+    'workspace_created',
+    'workspace_updated',
+    'workspace_deleted',
+  ]),
+  details: z.record(z.unknown()),
+  createdAt: z.date(),
+  user: z
+    .object({
+      id: z.string(),
+      name: z.string().optional(),
+      email: z.string().optional(),
+      image: z.string().optional(),
+    })
+    .optional(),
+});
+
+export type OrganizationActivity = z.infer<typeof organizationActivitySchema>;
+
+// Organization workspace schema
+export const organizationWorkspaceSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+});
+
+export type OrganizationWorkspace = z.infer<typeof organizationWorkspaceSchema>;
 
 // Organization invitation schema
 export const organizationInvitationSchema = z.object({
@@ -47,7 +119,38 @@ export type OrganizationInvitation = z.infer<
   typeof organizationInvitationSchema
 >;
 
+// ===== Request Schemas =====
+
+export const createWorkspaceRequestSchema = z.object({
+  organizationId: z.string(),
+  name: z.string(),
+  createdBy: z.string(),
+});
+
+export type CreateWorkspaceRequest = z.infer<
+  typeof createWorkspaceRequestSchema
+>;
+
+export const updateWorkspaceRequestSchema =
+  createWorkspaceRequestSchema.partial();
+
+export type UpdateWorkspaceRequest = z.infer<
+  typeof updateWorkspaceRequestSchema
+>;
+
 // ===== Permission Schemas =====
+
+export const resourceTypeSchema = z.enum([
+  'organization',
+  'workspace',
+  'project',
+]);
+
+export type ResourceType = z.infer<typeof resourceTypeSchema>;
+
+export const permissionLevelSchema = z.enum(['read', 'write', 'admin']);
+
+export type PermissionLevel = z.infer<typeof permissionLevelSchema>;
 
 export const organizationPermissionSchema = z.enum([
   'org:view',

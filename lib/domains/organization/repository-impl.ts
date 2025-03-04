@@ -1,48 +1,380 @@
 /**
  * Organization Domain Repository Implementation
  *
- * This file implements the repository interfaces for organization extensions
- * using direct database access with Drizzle ORM and Turso.
+ * This file implements the repository interfaces for organization extensions.
+ * It uses Drizzle ORM for database access and implements proper error handling
+ * and logging.
  */
 
-import { desc, eq, sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { eq, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
 
-import {
-  betterAuthClient,
-  handleBetterFetchError,
-} from '@/lib/better-auth/client';
-import { Organization } from '@/lib/better-auth/organization';
 import { db } from '@/lib/db';
-// Import schema from the main schema file
+import { logger } from '@/lib/logger';
 import {
-  member,
   organizationActivities,
   organizationCustomPermissions,
   organizationMetrics,
   organizationWorkspaces,
-} from '@/lib/db/schema';
-import { logger } from '@/lib/logger';
-
-import { OrganizationExtensionsRepository } from './repositories';
+} from '@/lib/db/schema/organization-extensions';
 import {
   CreateWorkspaceRequest,
   EnhancedOrganization,
   OrganizationActivity,
+  OrganizationActivityType,
   OrganizationMetrics,
   OrganizationWorkspace,
-  PERMISSION_LEVEL_TO_ACTIONS,
   PermissionLevel,
   ResourceType,
   UpdateWorkspaceRequest,
 } from './types';
+import {
+  EnhancedOrganizationRepository,
+  OrganizationActivityRepository,
+  OrganizationExtensionsRepository,
+  OrganizationMetricsRepository,
+  OrganizationPermissionRepository,
+  OrganizationWorkspaceRepository,
+} from './repositories';
+import {
+  organizationActivitySchema,
+  organizationMetricsSchema,
+  organizationWorkspaceSchema,
+} from '@/lib/db/_schema/organization';
 
 /**
- * Database repository implementation for organization extensions
+ * Base repository class with common functionality
  */
-export class DbOrganizationExtensionsRepository
+abstract class BaseRepository {
+  protected async handleError<T>(
+    operation: () => Promise<T>,
+    context: string
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      logger.error(`Repository operation failed: ${context}`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error(`Failed to ${context}: ${error}`);
+    }
+  }
+}
+
+/**
+ * Implementation of the OrganizationMetricsRepository
+ */
+export class OrganizationMetricsRepositoryImpl
+  extends BaseRepository
+  implements OrganizationMetricsRepository
+{
+  async getMetrics(organizationId: string): Promise<OrganizationMetrics> {
+    return this.handleError(
+      async () => {
+        const result = await db.query.organizationMetrics.findFirst({
+          where: eq(organizationMetrics.organizationId, organizationId),
+        });
+
+        if (!result) {
+          throw new Error(`No metrics found for organization ${organizationId}`);
+        }
+
+        return organizationMetricsSchema.parse(result);
+      },
+      `get metrics for organization ${organizationId}`
+    );
+  }
+}
+
+/**
+ * Implementation of the OrganizationActivityRepository
+ */
+export class OrganizationActivityRepositoryImpl
+  extends BaseRepository
+  implements OrganizationActivityRepository
+{
+  async getActivity(
+    organizationId: string,
+    limit?: number
+  ): Promise<OrganizationActivity[]> {
+    return this.handleError(
+      async () => {
+        const query = db.query.organizationActivities.findMany({
+          where: eq(organizationActivities.organizationId, organizationId),
+          orderBy: [desc(organizationActivities.createdAt)],
+          limit,
+        });
+
+        const results = await query;
+        return results.map((result) => organizationActivitySchema.parse(result));
+      },
+      `get activity for organization ${organizationId}`
+    );
+  }
+
+  async createActivity(
+    activity: Omit<OrganizationActivity, 'id' | 'createdAt'>
+  ): Promise<OrganizationActivity> {
+    return this.handleError(
+      async () => {
+        const [result] = await db
+          .insert(organizationActivities)
+          .values({
+            ...activity,
+            createdAt: new Date(),
+          })
+          .returning();
+
+        return organizationActivitySchema.parse(result);
+      },
+      `create activity for organization ${activity.organizationId}`
+    );
+  }
+}
+
+/**
+ * Implementation of the OrganizationWorkspaceRepository
+ */
+export class OrganizationWorkspaceRepositoryImpl
+  extends BaseRepository
+  implements OrganizationWorkspaceRepository
+{
+  async getWorkspaces(
+    organizationId: string
+  ): Promise<OrganizationWorkspace[]> {
+    return this.handleError(
+      async () => {
+        const results = await db.query.organizationWorkspaces.findMany({
+          where: eq(organizationWorkspaces.organizationId, organizationId),
+        });
+
+        return results.map((result) => organizationWorkspaceSchema.parse(result));
+      },
+      `get workspaces for organization ${organizationId}`
+    );
+  }
+
+  async getWorkspace(workspaceId: string): Promise<OrganizationWorkspace> {
+    return this.handleError(
+      async () => {
+        const result = await db.query.organizationWorkspaces.findFirst({
+          where: eq(organizationWorkspaces.id, workspaceId),
+        });
+
+        if (!result) {
+          throw new Error(`Workspace ${workspaceId} not found`);
+        }
+
+        return organizationWorkspaceSchema.parse(result);
+      },
+      `get workspace ${workspaceId}`
+    );
+  }
+
+  async createWorkspace(
+    data: CreateWorkspaceRequest
+  ): Promise<OrganizationWorkspace> {
+    return this.handleError(
+      async () => {
+        const [result] = await db
+          .insert(organizationWorkspaces)
+          .values({
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+
+        return organizationWorkspaceSchema.parse(result);
+      },
+      `create workspace for organization ${data.organizationId}`
+    );
+  }
+
+  async updateWorkspace(
+    data: UpdateWorkspaceRequest
+  ): Promise<OrganizationWorkspace> {
+    return this.handleError(
+      async () => {
+        const [result] = await db
+          .update(organizationWorkspaces)
+          .set({
+            ...data,
+            updatedAt: new Date(),
+          })
+          .where(eq(organizationWorkspaces.id, data.id))
+          .returning();
+
+        if (!result) {
+          throw new Error(`Workspace ${data.id} not found`);
+        }
+
+        return organizationWorkspaceSchema.parse(result);
+      },
+      `update workspace ${data.id}`
+    );
+  }
+
+  async deleteWorkspace(workspaceId: string): Promise<void> {
+    return this.handleError(
+      async () => {
+        const [result] = await db
+          .delete(organizationWorkspaces)
+          .where(eq(organizationWorkspaces.id, workspaceId))
+          .returning();
+
+        if (!result) {
+          throw new Error(`Workspace ${workspaceId} not found`);
+        }
+      },
+      `delete workspace ${workspaceId}`
+    );
+  }
+
+  async checkActionPermission(
+    userId: string,
+    organizationId: string,
+    resourceType: ResourceType,
+    resourceId: string,
+    action: string
+  ): Promise<boolean> {
+    return this.handleError(
+      async () => {
+        const result = await db.query.organizationCustomPermissions.findFirst({
+          where: and(
+            eq(organizationCustomPermissions.userId, userId),
+            eq(organizationCustomPermissions.organizationId, organizationId),
+            eq(organizationCustomPermissions.resourceType, resourceType),
+            eq(organizationCustomPermissions.resourceId, resourceId),
+            eq(organizationCustomPermissions.action, action)
+          ),
+        });
+
+        return !!result;
+      },
+      `check action permission for user ${userId} on ${resourceType}:${resourceId}`
+    );
+  }
+}
+
+/**
+ * Implementation of the EnhancedOrganizationRepository
+ */
+export class EnhancedOrganizationRepositoryImpl
+  extends BaseRepository
+  implements EnhancedOrganizationRepository
+{
+  constructor(
+    private metricsService: OrganizationMetricsService,
+    private workspaceService: OrganizationWorkspaceService
+  ) {
+    super();
+  }
+
+  async getEnhancedOrganization(slug: string): Promise<EnhancedOrganization> {
+    return this.handleError(
+      async () => {
+        // Get base organization data from Better-Auth
+        const organization = await betterAuthOrganizationService.getFullOrganization(slug);
+
+        try {
+          // Get metrics
+          const metrics = await this.metricsService.getMetrics(organization.id);
+
+          // Get workspaces
+          const workspaces = await this.workspaceService.getWorkspaces(organization.id);
+
+          // Combine all data
+          return {
+            ...organization,
+            metrics,
+            workspaces,
+          };
+        } catch (error) {
+          // If extension data fails, still return the base organization
+          logger.warn(
+            `Error getting extension data for organization ${slug}: ${error}`
+          );
+          return organization;
+        }
+      },
+      `get enhanced organization data for ${slug}`
+    );
+  }
+}
+
+/**
+ * Implementation of the OrganizationPermissionRepository
+ */
+export class OrganizationPermissionRepositoryImpl
+  extends BaseRepository
+  implements OrganizationPermissionRepository
+{
+  async checkActionPermission(
+    userId: string,
+    organizationId: string,
+    resourceType: ResourceType,
+    resourceId: string,
+    action: string
+  ): Promise<boolean> {
+    return this.handleError(
+      async () => {
+        const result = await db.query.organizationCustomPermissions.findFirst({
+          where: and(
+            eq(organizationCustomPermissions.userId, userId),
+            eq(organizationCustomPermissions.organizationId, organizationId),
+            eq(organizationCustomPermissions.resourceType, resourceType),
+            eq(organizationCustomPermissions.resourceId, resourceId),
+            eq(organizationCustomPermissions.action, action)
+          ),
+        });
+
+        return !!result;
+      },
+      `check action permission for user ${userId} on ${resourceType}:${resourceId}`
+    );
+  }
+}
+
+/**
+ * Combined organization extensions repository implementation
+ */
+export class OrganizationExtensionsRepositoryImpl
+  extends BaseRepository
   implements OrganizationExtensionsRepository
 {
+  private metricsRepository: OrganizationMetricsRepository;
+  private activityRepository: OrganizationActivityRepository;
+  private workspaceRepository: OrganizationWorkspaceRepository;
+  private enhancedOrganizationRepository: EnhancedOrganizationRepository;
+  private permissionRepository: OrganizationPermissionRepository;
+
+  constructor() {
+    super();
+
+    // Initialize repositories
+    this.metricsRepository = new OrganizationMetricsRepositoryImpl();
+    this.activityRepository = new OrganizationActivityRepositoryImpl();
+    this.workspaceRepository = new OrganizationWorkspaceRepositoryImpl();
+    this.permissionRepository = new OrganizationPermissionRepositoryImpl();
+    this.enhancedOrganizationRepository = new EnhancedOrganizationRepositoryImpl(
+      this.metricsRepository,
+      this.workspaceRepository
+    );
+  }
+
+  // Delegate all methods to their respective repositories
+  getMetrics = this.metricsRepository.getMetrics.bind(this.metricsRepository);
+  getActivity = this.activityRepository.getActivity.bind(this.activityRepository);
+  createActivity = this.activityRepository.createActivity.bind(this.activityRepository);
+  getWorkspaces = this.workspaceRepository.getWorkspaces.bind(this.workspaceRepository);
+  getWorkspace = this.workspaceRepository.getWorkspace.bind(this.workspaceRepository);
+  createWorkspace = this.workspaceRepository.createWorkspace.bind(this.workspaceRepository);
+  updateWorkspace = this.workspaceRepository.updateWorkspace.bind(this.workspaceRepository);
+  deleteWorkspace = this.workspaceRepository.deleteWorkspace.bind(this.workspaceRepository);
+  checkActionPermission = this.workspaceRepository.checkActionPermission.bind(this.workspaceRepository);
+  getEnhancedOrganization = this.enhancedOrganizationRepository.getEnhancedOrganization.bind(
   /**
    * Get metrics for an organization
    */

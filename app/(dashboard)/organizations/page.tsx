@@ -1,19 +1,9 @@
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth';
+import { OrganizationServiceImpl } from '@/lib/domains/organization/service-impl';
 import { logger } from '@/lib/logger';
-
-// Define the organization type
-interface Organization {
-  id: string;
-  name: string;
-  slug: string | null;
-  logo?: string | null;
-  role?: string;
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
-}
 
 /**
  * Organizations index page
@@ -30,8 +20,25 @@ export default async function OrganizationsIndexPage() {
 
   try {
     // Get the current session
+    // In Next.js 15, we need to await headers() and pass it to getSession
     const headersList = await headers();
-    session = await auth.api.getSession({ headers: headersList });
+    const headersObj = new Headers();
+
+    // Copy headers from the headersList to a standard Headers object
+    headersList.forEach((value, key) => {
+      headersObj.set(key, value);
+    });
+
+    // Add cookie header if it's not already present
+    const cookieStore = cookies();
+    if (cookieStore && !headersObj.has('cookie')) {
+      headersObj.set('Cookie', cookieStore.toString());
+    }
+
+    // @ts-ignore - Better-Auth types are not up to date
+    session = await auth.api.getSession({
+      headers: headersObj,
+    });
 
     logger.debug('Organizations index page session check', {
       hasSession: !!session,
@@ -49,36 +56,23 @@ export default async function OrganizationsIndexPage() {
       redirect('/sign-in?callbackUrl=/organizations');
     }
 
-    // Get the user's organizations using our API route
+    // Get the user's organizations using our domain service
     logger.debug('Organizations index page - fetching user organizations', {
       userId: session.user.id,
       component: 'OrganizationsIndexPage',
     });
 
     try {
-      // Call our internal API route
-      const response = await fetch('/api/organizations', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: headersList.get('cookie') || '',
-        },
-      });
+      // Use our domain service to get organizations
+      const organizationService = new OrganizationServiceImpl();
+      const userOrgs = await organizationService.list();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `API returned ${response.status}`);
-      }
-
-      const userOrgs: Organization[] = await response.json();
-
-      logger.debug('User organizations fetched from API', {
+      logger.debug('User organizations fetched successfully', {
         count: userOrgs.length,
         orgs: userOrgs.map((org) => ({
           id: org.id,
           name: org.name,
           slug: org.slug,
-          role: org.role,
         })),
         component: 'OrganizationsIndexPage',
       });
@@ -118,7 +112,7 @@ export default async function OrganizationsIndexPage() {
       );
       redirect('/organizations/new');
     } catch (apiError) {
-      logger.error('Error fetching organizations from API', {
+      logger.error('Error fetching organizations', {
         error: apiError instanceof Error ? apiError.message : String(apiError),
         stack: apiError instanceof Error ? apiError.stack : undefined,
         userId: session.user.id,

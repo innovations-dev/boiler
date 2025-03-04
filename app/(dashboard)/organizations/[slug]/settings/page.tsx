@@ -1,79 +1,62 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
-import { OrganizationProvider } from '@/app/(dashboard)/_context/organization-context';
-import { Shell } from '@/components/shell';
-import { withOrganizationAccess } from '@/lib/auth/organization/with-organization-access';
-import { organizationService } from '@/lib/better-auth/organization';
+import { OrganizationServiceImpl } from '@/lib/domains/organization/service-impl';
 import { logger } from '@/lib/logger';
 
-import { OrganizationForm } from '../../../_components/settings/organization-form';
-
-interface SettingsPageProps {
-  params: Promise<{ slug: string }>;
+interface OrganizationSettingsPageProps {
+  params: {
+    slug: string;
+  };
 }
 
-export default async function SettingsPage({ params }: SettingsPageProps) {
-  const { slug } = await params;
+export default async function OrganizationSettingsPage({
+  params: { slug },
+}: OrganizationSettingsPageProps) {
+  logger.debug('Organization settings page rendering', {
+    component: 'OrganizationSettingsPage',
+    slug,
+    timestamp: new Date().toISOString(),
+  });
 
-  return withOrganizationAccess(slug, async (session) => {
-    try {
-      // Use Better-Auth client to get the organization
-      const org = await organizationService.getFullOrganization(slug);
+  try {
+    const organizationService = new OrganizationServiceImpl();
+    const organization = await organizationService.getBySlug(slug);
 
-      // Check if user has permission to edit settings (must be OWNER or ADMIN)
-      const userMember = org.members?.find((m) => m.userId === session.user.id);
-
-      if (!userMember) {
-        logger.debug('User is not a member of the organization', {
-          userId: session.user.id,
-          orgSlug: slug,
-          component: 'SettingsPage',
-        });
-        redirect('/organizations/' + slug);
-      }
-
-      if (userMember.role !== 'OWNER' && userMember.role !== 'ADMIN') {
-        logger.debug('User does not have permission to edit settings', {
-          userId: session.user.id,
-          orgSlug: slug,
-          role: userMember.role,
-          component: 'SettingsPage',
-        });
-        redirect('/organizations/' + slug);
-      }
-
-      logger.debug('Access granted to settings page', {
-        userId: session.user.id,
-        orgId: org.id,
-        role: userMember.role,
-        component: 'SettingsPage',
-      });
-
-      return (
-        <OrganizationProvider organization={org} currentMember={userMember}>
-          <Shell>
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  Organization Settings
-                </h1>
-                <p className="text-muted-foreground">
-                  Manage your organization profile and preferences
-                </p>
-              </div>
-
-              <OrganizationForm organization={org} />
-            </div>
-          </Shell>
-        </OrganizationProvider>
-      );
-    } catch (error) {
-      logger.error('Error fetching organization', {
+    if (!organization) {
+      logger.debug('Organization not found', {
+        component: 'OrganizationSettingsPage',
         slug,
-        error: error instanceof Error ? error.message : String(error),
-        component: 'SettingsPage',
       });
       notFound();
     }
-  });
+
+    logger.debug('Organization fetched successfully', {
+      component: 'OrganizationSettingsPage',
+      organizationId: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+    });
+
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-4">Organization Settings</h1>
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Organization Details</h2>
+            <p>Name: {organization.name}</p>
+            <p>Slug: {organization.slug}</p>
+            {/* Add more organization settings here */}
+          </div>
+        </div>
+      </div>
+    );
+  } catch (error) {
+    logger.error('Error fetching organization:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      component: 'OrganizationSettingsPage',
+      slug,
+    });
+    notFound();
+  }
 }

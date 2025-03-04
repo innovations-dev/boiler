@@ -114,33 +114,3 @@ export type Member = z.infer<typeof memberSchema>;
 export type CoercedSession = z.infer<typeof coercedSessionSelectSchema>;
 export type Session = z.infer<typeof sessionSelectSchema>;
 export type SessionInsert = typeof session.$inferInsert;
-
-// ===== Re-export from organization.ts =====
-export {
-  organizationMemberSchema,
-  organizationMetricsSchema,
-  organizationInvitationSchema,
-  organizationPermissionSchema,
-  ROLE_PERMISSIONS,
-} from './organization';
-
-export type {
-  OrganizationMember,
-  OrganizationMetrics,
-  OrganizationInvitation,
-  OrganizationPermission,
-} from './organization';
-
-// ===== Re-export from invitation.ts =====
-export {
-  invitationSchema,
-  enhancedInvitationSchema,
-  createInvitationSchema,
-  updateInvitationSchema,
-} from './invitation';
-
-export type {
-  Invitation,
-  CreateInvitationInput,
-  UpdateInvitationInput,
-} from './invitation';

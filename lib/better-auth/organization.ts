@@ -5,6 +5,10 @@
  * It handles authentication, error handling, and response parsing.
  */
 
+import { headers } from 'next/headers';
+
+import { logger } from '@/lib/logger';
+
 import { betterAuthClient, handleBetterFetchError } from './client';
 
 // Organization types
@@ -138,16 +142,39 @@ export const organizationService = {
 
   /**
    * List all organizations for the current user
+   *
+   * In server components, this method will use the cookies from the request context.
+   * In client components, it will use the cookies from the browser.
    */
   async list(): Promise<Organization[]> {
-    const response =
-      await betterAuthClient.get<Organization[]>('/organization/list');
+    try {
+      // Check if we're in a server component by trying to access cookies()
 
-    if (!response.success) {
-      handleBetterFetchError(response);
+      const response = await betterAuthClient.get<Organization[]>(
+        '/organization/list',
+        {
+          headers: await headers(),
+        }
+      );
+
+      if (!response.success) {
+        handleBetterFetchError(response);
+      }
+
+      logger.debug('Organizations fetched successfully', {
+        count: response.data?.length || 0,
+      });
+
+      return response.data || [];
+    } catch (error) {
+      logger.error('Error fetching organizations', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      // Return empty array instead of throwing to prevent cascading errors
+      return [];
     }
-
-    return response.data || [];
   },
 
   /**

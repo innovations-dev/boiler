@@ -5,6 +5,14 @@
  * It uses the repository interfaces to access data and implements the business logic.
  */
 
+import { headers } from 'next/headers';
+import { z } from 'zod';
+
+import { organizationService as betterAuthOrganizationService } from '@/lib/better-auth/organization';
+import {
+  createOrganizationSchema,
+  updateOrganizationSchema,
+} from '@/lib/db/_schema/organization';
 import { logger } from '@/lib/logger';
 
 import {
@@ -21,6 +29,7 @@ import {
   OrganizationExtensionsService,
   OrganizationMetricsService,
   OrganizationPermissionService,
+  OrganizationService,
   OrganizationWorkspaceService,
 } from './services';
 import {
@@ -35,6 +44,152 @@ import {
   ResourceType,
   UpdateWorkspaceRequest,
 } from './types';
+
+/**
+ * Implementation of the base OrganizationService
+ */
+export class OrganizationServiceImpl implements OrganizationService {
+  constructor() {}
+
+  private async getSessionHeaders(): Promise<Headers> {
+    try {
+      const headersList = await headers();
+      const headersObj = new Headers();
+
+      // Copy all headers
+      for (const [key, value] of headersList.entries()) {
+        headersObj.set(key, value);
+      }
+
+      return headersObj;
+    } catch (error) {
+      logger.error('Error getting session headers:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to get session headers');
+    }
+  }
+
+  async list() {
+    try {
+      logger.debug('Listing organizations for current user');
+      const headers = await this.getSessionHeaders();
+      return await betterAuthOrganizationService.list();
+    } catch (error) {
+      logger.error('Error listing organizations:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to list organizations');
+    }
+  }
+
+  async getBySlug(slug: string) {
+    try {
+      logger.debug(`Getting organization by slug: ${slug}`);
+      const headers = await this.getSessionHeaders();
+      return await betterAuthOrganizationService.getFullOrganization(slug);
+    } catch (error) {
+      logger.error(`Error getting organization by slug ${slug}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to get organization');
+    }
+  }
+
+  async create(data: {
+    name: string;
+    slug?: string;
+    logo?: string;
+    metadata?: Record<string, any>;
+  }) {
+    try {
+      logger.debug('Creating new organization:', { name: data.name });
+
+      // Validate input data
+      const validatedData = createOrganizationSchema.parse(data);
+
+      const headers = await this.getSessionHeaders();
+      return await betterAuthOrganizationService.create(validatedData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.error('Invalid organization data:', {
+          errors: error.errors,
+          data,
+        });
+        throw new Error('Invalid organization data');
+      }
+
+      logger.error('Error creating organization:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to create organization');
+    }
+  }
+
+  async update(data: {
+    id: string;
+    name?: string;
+    slug?: string;
+    logo?: string;
+    metadata?: Record<string, any>;
+  }) {
+    try {
+      logger.debug(`Updating organization: ${data.id}`);
+
+      // Validate input data
+      const validatedData = updateOrganizationSchema.parse(data);
+
+      const headers = await this.getSessionHeaders();
+      return await betterAuthOrganizationService.update(validatedData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.error('Invalid organization update data:', {
+          errors: error.errors,
+          data,
+        });
+        throw new Error('Invalid organization update data');
+      }
+
+      logger.error(`Error updating organization ${data.id}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to update organization');
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      logger.debug(`Deleting organization: ${id}`);
+      const headers = await this.getSessionHeaders();
+      await betterAuthOrganizationService.delete(id);
+    } catch (error) {
+      logger.error(`Error deleting organization ${id}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to delete organization');
+    }
+  }
+
+  async setActive(id: string) {
+    try {
+      logger.debug(`Setting active organization: ${id}`);
+      const headers = await this.getSessionHeaders();
+      await betterAuthOrganizationService.setActive(id);
+    } catch (error) {
+      logger.error(`Error setting active organization ${id}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new Error('Failed to set active organization');
+    }
+  }
+}
 
 /**
  * Implementation of the OrganizationMetricsService

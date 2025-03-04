@@ -266,10 +266,6 @@ export async function createOrganization(data: {
   // Make a direct API call to the Better-Auth organization/create endpoint
   // This is the correct way to interact with Better-Auth's organization functionality
   try {
-    // Get the request headers to forward cookies
-    const requestHeaders = await headers();
-    const cookieHeader = requestHeaders.get('cookie') || '';
-
     // Ensure slug is provided or generated
     const slug = data.slug || slugify(name);
 

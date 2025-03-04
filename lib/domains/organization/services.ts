@@ -6,6 +6,8 @@
  * independent of the specific implementation.
  */
 
+import { Organization } from '@/lib/better-auth/organization';
+
 import {
   CreateWorkspaceRequest,
   EnhancedOrganization,
@@ -16,6 +18,52 @@ import {
   ResourceType,
   UpdateWorkspaceRequest,
 } from './types';
+
+/**
+ * Base organization service interface
+ */
+export interface OrganizationService {
+  /**
+   * List all organizations for the current user
+   */
+  list(): Promise<Organization[]>;
+
+  /**
+   * Get a specific organization by slug
+   */
+  getBySlug(slug: string): Promise<Organization>;
+
+  /**
+   * Create a new organization
+   */
+  create(data: {
+    name: string;
+    slug?: string;
+    logo?: string;
+    metadata?: Record<string, any>;
+  }): Promise<Organization>;
+
+  /**
+   * Update an organization
+   */
+  update(data: {
+    id: string;
+    name?: string;
+    slug?: string;
+    logo?: string;
+    metadata?: Record<string, any>;
+  }): Promise<Organization>;
+
+  /**
+   * Delete an organization
+   */
+  delete(id: string): Promise<void>;
+
+  /**
+   * Set active organization
+   */
+  setActive(id: string): Promise<void>;
+}
 
 /**
  * Organization metrics service interface

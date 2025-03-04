@@ -7,7 +7,6 @@
 
 import { betterFetch } from '@better-fetch/fetch';
 
-import { auth } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { ERROR_CODES } from '@/lib/types/responses/error';
@@ -98,9 +97,7 @@ export class BetterAuthClient {
               errorCode = BetterAuthErrorCode.CONFLICT;
               break;
             default:
-              if (response.error.status >= 500) {
-                errorCode = BetterAuthErrorCode.INTERNAL_SERVER_ERROR;
-              }
+              errorCode = BetterAuthErrorCode.INTERNAL_SERVER_ERROR;
           }
         }
 
@@ -108,7 +105,7 @@ export class BetterAuthClient {
           success: false,
           error: {
             code: errorCode,
-            message: response.error.message || 'An unknown error occurred',
+            message: response.error.message || 'Unknown error',
             status: response.error.status,
             statusText: response.error.statusText,
           },
@@ -122,17 +119,15 @@ export class BetterAuthClient {
     } catch (error) {
       logger.error('Better-Auth API request failed', {
         endpoint,
-        error,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       return {
         success: false,
         error: {
           code: BetterAuthErrorCode.INTERNAL_SERVER_ERROR,
-          message:
-            error instanceof Error
-              ? error.message
-              : 'An unknown error occurred',
+          message: error instanceof Error ? error.message : String(error),
         },
       };
     }
@@ -195,7 +190,7 @@ export class BetterAuthClient {
   }
 }
 
-// Export a singleton instance
+// Create a singleton instance
 export const betterAuthClient = new BetterAuthClient();
 
 // Helper function to handle errors
@@ -271,13 +266,15 @@ export function handleBetterFetchError(error: any): never {
           context: error.error.context || undefined,
           cause: error.error.message || undefined,
         });
-      case 429:
-        throw new AppError('Too many requests', {
-          code: ERROR_CODES.TOO_MANY_REQUESTS,
-          status: 429,
-          context: error.error.context || undefined,
-          cause: error.error.message || undefined,
-        });
+      default:
+        if (error.error.status >= 500) {
+          throw new AppError('Server error', {
+            code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            status: error.error.status,
+            context: error.error.context || undefined,
+            cause: error.error.message || undefined,
+          });
+        }
     }
   }
 
@@ -285,7 +282,7 @@ export function handleBetterFetchError(error: any): never {
   throw new AppError('An unexpected error occurred', {
     code: ERROR_CODES.INTERNAL_SERVER_ERROR,
     status: 500,
-    context: error?.error?.context || undefined,
-    cause: error instanceof Error ? error.message : String(error),
+    context: error?.context || undefined,
+    cause: error?.message || 'Unknown error',
   });
 }
