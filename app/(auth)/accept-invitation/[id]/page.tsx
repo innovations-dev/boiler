@@ -42,7 +42,7 @@ export default function InvitationPage() {
 
   const { data: invitation, isLoading: isLoadingInvitation } =
     useQuery<Invitation>({
-      queryKey: queryKeys.organizations.invitations.detail(params.id),
+      queryKey: queryKeys.org.invitations.get(params.id),
       queryFn: async () => {
         const response = await authClient.organization.getInvitation({
           query: { id: params.id },

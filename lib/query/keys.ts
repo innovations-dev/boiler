@@ -72,15 +72,6 @@ export const queryKeys = {
      */
     preferences: (id: string) => ['users', id, 'preferences'] as const,
   },
-  /** Organization-related query keys */
-  organizations: {
-    /** @deprecated Use new better-auth plugin implementation instead  */
-    invitations: {
-      // all: (slug: string) => ['organizations', slug, 'invitations'] as const,
-      // Currentled used by app/(auth)/accept-invitation/[id]/page.tsx
-      detail: (id: string) => ['organizations', 'invitations', id] as const,
-    },
-  },
   /** Session-related query keys */
   session: {
     /** Get current session */
@@ -109,6 +100,11 @@ export const queryKeys = {
        */
       detail: (workspaceId: string) =>
         ['org', 'workspaces', 'detail', workspaceId] as const,
+    },
+    invitations: {
+      // all: (slug: string) => ['organizations', slug, 'invitations'] as const,
+      // Currentled used by app/(auth)/accept-invitation/[id]/page.tsx
+      get: (id: string) => ['org', 'invitations', id] as const,
     },
   },
 } as const;

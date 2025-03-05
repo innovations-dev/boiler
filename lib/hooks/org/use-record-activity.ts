@@ -35,11 +35,30 @@ export function useRecordActivity() {
 
   return useMutation({
     mutationFn: async (input: RecordActivityInput) => {
+      // Map the input to match the schema
+      const mappedInput = {
+        orgId: input.orgId,
+        userId: input.userId,
+        action: input.action,
+        resource: input.resourceType || '',
+        resourceId: input.resourceId,
+        metadata: input.metadata,
+      };
+
       // Validate the input
-      const validatedInput = recordActivityInputSchema.parse(input);
+      const validatedInput = recordActivityInputSchema.parse(mappedInput);
 
       const orgAdapter = createOrgAdapter();
-      const activity = await orgAdapter.recordOrgActivity(validatedInput);
+      // Map the validated input back to the interface expected by the adapter
+      const adapterInput = {
+        orgId: validatedInput.orgId,
+        userId: validatedInput.userId,
+        action: validatedInput.action,
+        resourceType: validatedInput.resource,
+        resourceId: validatedInput.resourceId || '',
+        metadata: validatedInput.metadata,
+      } as const;
+      const activity = await orgAdapter.recordActivity(adapterInput);
 
       // Validate the response
       return orgActivitySchema.parse(activity);
