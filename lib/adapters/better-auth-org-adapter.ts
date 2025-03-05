@@ -53,8 +53,14 @@ import type { OrgAdapter } from './org-adapter';
  * @template T The type of data contained in the response
  */
 interface BetterAuthResponse<T> {
-  data: T;
-  error?: string;
+  success: boolean;
+  data?: T;
+  message?: string;
+  timestamp?: string;
+  error?: {
+    code: string;
+    message: string;
+  };
 }
 
 /**
@@ -98,49 +104,48 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Helper method to make typed fetch requests to the Better Auth API
+   * Typed fetch helper
    *
-   * This method handles the common pattern of making requests to the Better Auth API
-   * and processing the responses. It extracts the data from the response and handles
-   * error cases consistently.
+   * This method provides a typed wrapper around the Better Auth client's fetch method.
+   * It handles error responses and ensures that the response data is properly typed.
    *
-   * @template T The type of data to return
-   * @param url The URL to fetch
-   * @param options The fetch options
-   * @returns A promise that resolves to the data
+   * @param url - The URL to fetch
+   * @param options - The fetch options
+   * @returns The typed response data
+   * @throws Error if the request fails
    */
   private async typedFetch<T>(
     url: string,
     options?: { method?: string; body?: any }
   ): Promise<T> {
-    const response = await this.client.$fetch<BetterAuthResponse<T>>(
-      url,
-      options
-    );
+    try {
+      const response = await this.client.$fetch<any>(url, options);
 
-    // Type assertion to handle the response
-    const typedResponse = response as BetterAuthResponse<T>;
+      // Handle error responses
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
 
-    if (typedResponse.error) {
-      throw new Error(typedResponse.error);
+      // Handle responses with a data property (Better Auth standard format)
+      if (response.data !== undefined) {
+        return response.data as T;
+      }
+
+      // Handle direct data responses (our custom endpoints)
+      // If the response doesn't have a data property but has other properties
+      // that match our expected type, return the response directly
+      return response as T;
+    } catch (error) {
+      console.error(`Error fetching ${url}:`, error);
+      throw error;
     }
-
-    return typedResponse.data;
   }
 
   /**
-   * Get metrics for an organization
+   * Gets organization metrics
    *
-   * Retrieves the current metrics for an organization.
-   *
-   * This method is part of the organization workflow's metrics tracking functionality,
-   * allowing the application to retrieve usage metrics for an organization.
-   *
-   * @param orgId - The ID of the organization
-   * @returns The organization metrics
-   *
-   * @example
-   * const metrics = await adapter.getOrgMetrics('org-123');
+   * @param {string} orgId - Organization ID
+   * @returns Organization metrics
    */
   async getOrgMetrics(orgId: string): Promise<OrgMetrics> {
     try {
@@ -153,23 +158,11 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Update metrics for an organization
+   * Updates organization metrics
    *
-   * Updates the metrics for an organization.
-   *
-   * This method is part of the organization workflow's metrics tracking functionality,
-   * allowing the application to update usage metrics for an organization.
-   *
-   * @param orgId - The ID of the organization
-   * @param metrics - The metrics to update
-   * @returns The updated organization metrics
-   *
-   * @example
-   * const updatedMetrics = await adapter.updateOrgMetrics('org-123', {
-   *   activeUsers: 15,
-   *   totalWorkspaces: 8,
-   *   storageUsed: 2048000
-   * });
+   * @param {string} orgId - Organization ID
+   * @param {UpdateMetricsInput} metrics - Metrics to update
+   * @returns Updated organization metrics
    */
   async updateOrgMetrics(
     orgId: string,
@@ -188,33 +181,31 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Record activity for an organization
+   * Records organization activity
    *
-   * @param activity - The activity to record
-   * @returns The recorded activity
+   * @param {RecordActivityInput} activity - Activity to record
+   * @returns Recorded activity
    */
   async recordActivity(activity: RecordActivityInput): Promise<OrgActivity> {
     try {
-      return await this.typedFetch<OrgActivity>(
-        `/org/activity/${activity.orgId}`,
-        {
-          method: 'POST',
-          body: activity,
-        }
-      );
+      // Now that we've updated the schemas, we can directly pass the activity
+      return await this.typedFetch<OrgActivity>(`/org/activity`, {
+        method: 'POST',
+        body: activity,
+      });
     } catch (error) {
       throw new Error(
-        `Failed to record organization activity: ${(error as Error).message}`
+        `Failed to record activity for organization ${activity.orgId}: ${(error as Error).message}`
       );
     }
   }
 
   /**
-   * Get activity history for an organization
+   * Gets organization activity history
    *
-   * @param orgId - The ID of the organization
-   * @param options - Options for pagination
-   * @returns The organization activity history
+   * @param {string} orgId - Organization ID
+   * @param {object} options - Options for pagination
+   * @returns Organization activity history
    */
   async getActivityHistory(
     orgId: string,
@@ -222,26 +213,32 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   ): Promise<OrgActivity[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (options?.limit) queryParams.append('limit', options.limit.toString());
-      if (options?.offset)
+      if (options?.limit !== undefined) {
+        queryParams.append('limit', options.limit.toString());
+      }
+      if (options?.offset !== undefined) {
         queryParams.append('offset', options.offset.toString());
+      }
 
       const queryString = queryParams.toString();
-      const endpoint = `/org/activity/${orgId}${queryString ? `?${queryString}` : ''}`;
+      const url = `/org/activity/${orgId}${
+        queryString ? `?${queryString}` : ''
+      }`;
 
-      return await this.typedFetch<OrgActivity[]>(endpoint);
+      // Now that we've updated the schemas, we can directly return the response
+      return await this.typedFetch<OrgActivity[]>(url);
     } catch (error) {
       throw new Error(
-        `Failed to get organization activity history for organization ${orgId}: ${(error as Error).message}`
+        `Failed to get activity history for organization ${orgId}: ${(error as Error).message}`
       );
     }
   }
 
   /**
-   * List workspaces for an organization
+   * Lists workspaces for an organization
    *
-   * @param orgId - The ID of the organization
-   * @returns The organization workspaces
+   * @param {string} orgId - Organization ID
+   * @returns Organization workspaces
    */
   async listWorkspaces(orgId: string): Promise<OrgWorkspace[]> {
     try {
@@ -254,22 +251,19 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Create a workspace for an organization
+   * Creates a workspace
    *
-   * @param workspace - The workspace to create
-   * @returns The created workspace
+   * @param {CreateWorkspaceInput} workspace - Workspace to create
+   * @returns Created workspace
    */
   async createWorkspace(
     workspace: CreateWorkspaceInput
   ): Promise<OrgWorkspace> {
     try {
-      return await this.typedFetch<OrgWorkspace>(
-        `/org/workspaces/${workspace.orgId}`,
-        {
-          method: 'POST',
-          body: workspace,
-        }
-      );
+      return await this.typedFetch<OrgWorkspace>(`/org/workspaces`, {
+        method: 'POST',
+        body: workspace,
+      });
     } catch (error) {
       throw new Error(
         `Failed to create workspace for organization ${workspace.orgId}: ${(error as Error).message}`
@@ -278,15 +272,15 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Get a workspace by ID
+   * Gets a workspace
    *
-   * @param workspaceId - The ID of the workspace
-   * @returns The workspace
+   * @param {string} workspaceId - Workspace ID
+   * @returns Workspace
    */
   async getWorkspace(workspaceId: string): Promise<OrgWorkspace> {
     try {
       return await this.typedFetch<OrgWorkspace>(
-        `/org/workspaces/detail/${workspaceId}`
+        `/org/workspaces/${workspaceId}`
       );
     } catch (error) {
       throw new Error(
@@ -296,11 +290,11 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Update a workspace
+   * Updates a workspace
    *
-   * @param workspaceId - The ID of the workspace
-   * @param updates - The updates to apply
-   * @returns The updated workspace
+   * @param {string} workspaceId - Workspace ID
+   * @param {UpdateWorkspaceInput} updates - Updates to apply
+   * @returns Updated workspace
    */
   async updateWorkspace(
     workspaceId: string,
@@ -310,7 +304,7 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
       return await this.typedFetch<OrgWorkspace>(
         `/org/workspaces/${workspaceId}`,
         {
-          method: 'PATCH',
+          method: 'POST',
           body: updates,
         }
       );
@@ -322,20 +316,47 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   }
 
   /**
-   * Delete a workspace
+   * Deletes a workspace
    *
-   * @param workspaceId - The ID of the workspace
-   * @returns A promise that resolves when the workspace is deleted
+   * @param {string} workspaceId - Workspace ID
    */
   async deleteWorkspace(workspaceId: string): Promise<void> {
     try {
       await this.typedFetch<void>(`/org/workspaces/${workspaceId}`, {
-        method: 'DELETE',
+        method: 'POST',
+        body: { _method: 'DELETE' },
       });
     } catch (error) {
       throw new Error(
         `Failed to delete workspace ${workspaceId}: ${(error as Error).message}`
       );
+    }
+  }
+
+  /**
+   * Pings the organization plugin
+   *
+   * @returns A response with a success message and timestamp
+   */
+  async ping(): Promise<{
+    success: boolean;
+    message: string;
+    timestamp: string;
+  }> {
+    try {
+      // Use typedFetch for consistency with other methods
+      return await this.typedFetch<{
+        success: boolean;
+        message: string;
+        timestamp: string;
+      }>('/org/ping', { method: 'GET' });
+    } catch (error) {
+      console.error('Error pinging org plugin:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 }

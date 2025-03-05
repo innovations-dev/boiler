@@ -195,8 +195,8 @@ export function MetricsTestSection() {
               <div>
                 <Label>Last Updated</Label>
                 <div className="mt-1 font-mono text-sm">
-                  {metrics.updatedAt
-                    ? new Date(metrics.updatedAt).toLocaleString()
+                  {metrics.lastUpdated
+                    ? new Date(metrics.lastUpdated).toLocaleString()
                     : 'N/A'}
                 </div>
               </div>

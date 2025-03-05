@@ -18,10 +18,19 @@ import { z } from 'zod';
 export const orgMetricsSchema = z.object({
   id: z.string(),
   orgId: z.string(),
-  activeUsers: z.number().int().nonnegative(),
-  totalWorkspaces: z.number().int().nonnegative(),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
+  activeUsers: z
+    .union([z.string(), z.number().int().nonnegative()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val)),
+  totalUsers: z
+    .union([z.string(), z.number().int().nonnegative()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val)),
+  totalWorkspaces: z
+    .union([z.string(), z.number().int().nonnegative()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val)),
+  lastUpdated: z
+    .union([z.string(), z.date()])
+    .transform((val) => (typeof val === 'string' ? val : val.toISOString())),
+  additionalMetrics: z.record(z.any()).optional(),
 });
 
 export type OrgMetricsSchema = z.infer<typeof orgMetricsSchema>;
@@ -30,8 +39,12 @@ export type OrgMetricsSchema = z.infer<typeof orgMetricsSchema>;
  * Schema for updating organization metrics
  */
 export const updateMetricsInputSchema = z.object({
-  activeUsers: z.number().int().nonnegative().optional(),
-  totalWorkspaces: z.number().int().nonnegative().optional(),
+  activeUsers: z.union([z.string(), z.number().int().nonnegative()]).optional(),
+  totalUsers: z.union([z.string(), z.number().int().nonnegative()]).optional(),
+  totalWorkspaces: z
+    .union([z.string(), z.number().int().nonnegative()])
+    .optional(),
+  additionalMetrics: z.record(z.any()).optional(),
 });
 
 export type UpdateMetricsInputSchema = z.infer<typeof updateMetricsInputSchema>;
@@ -44,10 +57,12 @@ export const orgActivitySchema = z.object({
   orgId: z.string(),
   userId: z.string(),
   action: z.string(),
-  resource: z.string(),
-  resourceId: z.string().optional(),
+  resourceType: z.string(),
+  resourceId: z.string(),
   metadata: z.record(z.any()).optional(),
-  timestamp: z.string().datetime(),
+  timestamp: z
+    .union([z.string().datetime(), z.date()])
+    .transform((val) => (typeof val === 'string' ? val : val.toISOString())),
 });
 
 export type OrgActivitySchema = z.infer<typeof orgActivitySchema>;
@@ -59,8 +74,8 @@ export const recordActivityInputSchema = z.object({
   orgId: z.string(),
   userId: z.string(),
   action: z.string(),
-  resource: z.string(),
-  resourceId: z.string().optional(),
+  resourceType: z.string(),
+  resourceId: z.string(),
   metadata: z.record(z.any()).optional(),
 });
 
@@ -74,11 +89,17 @@ export type RecordActivityInputSchema = z.infer<
 export const orgWorkspaceSchema = z.object({
   id: z.string(),
   orgId: z.string(),
-  name: z.string().optional(),
+  name: z.string(),
   description: z.string().optional(),
+  createdBy: z.string(),
+  createdAt: z
+    .union([z.string().datetime(), z.date()])
+    .transform((val) => (typeof val === 'string' ? val : val.toISOString())),
+  updatedAt: z
+    .union([z.string().datetime(), z.date()])
+    .transform((val) => (typeof val === 'string' ? val : val.toISOString()))
+    .optional(),
   metadata: z.record(z.any()).optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().optional(),
 });
 
 export type OrgWorkspaceSchema = z.infer<typeof orgWorkspaceSchema>;
@@ -88,8 +109,9 @@ export type OrgWorkspaceSchema = z.infer<typeof orgWorkspaceSchema>;
  */
 export const createWorkspaceInputSchema = z.object({
   orgId: z.string(),
-  name: z.string().optional(),
+  name: z.string(),
   description: z.string().optional(),
+  createdBy: z.string(),
   metadata: z.record(z.any()).optional(),
 });
 

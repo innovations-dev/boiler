@@ -20,10 +20,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ActivityTestSection } from './activity-test';
+import { ActivityTestSection } from './_components/activity-test';
 // Import test components
-import { MetricsTestSection } from './metrics-test';
-import { WorkspacesTestSection } from './workspaces-test';
+import { MetricsTestSection } from './_components/metrics-test';
+import { PingTestSection } from './_components/ping-test';
+import { WorkspacesTestSection } from './_components/workspaces-test';
 
 /**
  * Loading component for the test page
@@ -59,12 +60,29 @@ export default function TestOrgHooksPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="metrics" className="w-full">
+      <Tabs defaultValue="ping" className="w-full">
         <TabsList className="mb-4">
+          <TabsTrigger value="ping">Ping</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ping">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plugin Connectivity Test</CardTitle>
+              <CardDescription>
+                Test the basic connectivity to the custom organization plugin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<TestPageLoading />}>
+                <PingTestSection />
+              </Suspense>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="metrics">
           <Card>

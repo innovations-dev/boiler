@@ -58,17 +58,17 @@ export interface UpdateMetricsInput {
   /**
    * The number of active users in the organization
    */
-  activeUsers?: number;
+  activeUsers?: string | number;
 
   /**
    * The total number of users in the organization
    */
-  totalUsers?: number;
+  totalUsers?: string | number;
 
   /**
    * The number of workspaces in the organization
    */
-  totalWorkspaces?: number;
+  totalWorkspaces?: string | number;
 
   /**
    * Additional metrics specific to the organization

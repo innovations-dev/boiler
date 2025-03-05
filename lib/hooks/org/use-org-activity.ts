@@ -39,10 +39,19 @@ export function useOrgActivity(
     queryKey: [...queryKeys.org.activity(orgId), paginationOptions],
     queryFn: async () => {
       const orgAdapter = createOrgAdapter();
-      const activity = await orgAdapter.getOrgActivity(
-        orgId,
-        paginationOptions
-      );
+
+      // Convert pagination options to the format expected by the adapter
+      const options = paginationOptions
+        ? {
+            limit: paginationOptions.limit,
+            offset: paginationOptions.page
+              ? (paginationOptions.page - 1) * (paginationOptions.limit || 10)
+              : undefined,
+          }
+        : undefined;
+
+      // Use getActivityHistory instead of getOrgActivity
+      const activity = await orgAdapter.getActivityHistory(orgId, options);
 
       // Validate the response data
       return orgActivitySchema.array().parse(activity);

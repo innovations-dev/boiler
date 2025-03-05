@@ -7,6 +7,8 @@ import {
   organization,
 } from 'better-auth/plugins';
 
+import { orgPlugin } from '@/lib/better-auth/plugins/org';
+
 import { sendInvitationEmail } from './send-invitation-email';
 import { sendMagicLink } from './send-magic-link';
 
@@ -20,4 +22,5 @@ export const betterAuthPlugins: BetterAuthOptions['plugins'] = [
   magicLink({ sendMagicLink }),
   multiSession(),
   openAPI(),
+  orgPlugin(),
 ];

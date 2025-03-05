@@ -36,6 +36,13 @@ import type {
  */
 export interface OrgAdapter {
   /**
+   * Ping the organization plugin to test connectivity
+   *
+   * @returns A response with a success message and timestamp
+   */
+  ping(): Promise<{ success: boolean; message: string; timestamp: string }>;
+
+  /**
    * Get metrics for an organization
    *
    * @param orgId - The ID of the organization

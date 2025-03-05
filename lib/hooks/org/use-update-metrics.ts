@@ -13,15 +13,13 @@ import {
   orgMetricsSchema,
   updateMetricsInputSchema,
 } from '@/lib/schemas/org-schemas';
+import { UpdateMetricsInput as BaseUpdateMetricsInput } from '@/lib/types/org';
 
 /**
- * Interface for metrics update input
+ * Extended interface for metrics update input with orgId
  */
-export interface UpdateMetricsInput {
+export interface UpdateMetricsInput extends BaseUpdateMetricsInput {
   orgId: string;
-  activeUsers?: number;
-  totalWorkspaces?: number;
-  lastActivityDate?: Date;
 }
 
 /**
@@ -33,11 +31,13 @@ export function useUpdateMetrics() {
 
   return useMutation({
     mutationFn: async (input: UpdateMetricsInput) => {
+      const { orgId, ...metricsData } = input;
+
       // Validate the input
-      const validatedInput = updateMetricsInputSchema.parse(input);
+      const validatedInput = updateMetricsInputSchema.parse(metricsData);
 
       const orgAdapter = createOrgAdapter();
-      const metrics = await orgAdapter.updateOrgMetrics(validatedInput);
+      const metrics = await orgAdapter.updateOrgMetrics(orgId, validatedInput);
 
       // Validate the response
       return orgMetricsSchema.parse(metrics);

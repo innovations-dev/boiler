@@ -6,7 +6,9 @@
  */
 
 import { betterFetch } from '@better-fetch/fetch';
+import { createAuthClient } from 'better-auth/client';
 
+import { orgClientPlugin } from '@/lib/better-auth/plugins/org/client';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { ERROR_CODES } from '@/lib/types/responses/error';
@@ -192,6 +194,12 @@ export class BetterAuthClient {
 
 // Create a singleton instance
 export const betterAuthClient = new BetterAuthClient();
+
+// Initialize Better Auth client with plugins
+export const authClient = createAuthClient({
+  baseURL: getBaseUrl().toString() + '/api/auth',
+  plugins: [orgClientPlugin()],
+});
 
 // Helper function to handle errors
 export function handleBetterFetchError(error: any): never {

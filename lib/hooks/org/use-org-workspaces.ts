@@ -27,9 +27,11 @@ export function useOrgWorkspaces(
     queryKey: [...queryKeys.org.workspaces.all(orgId), paginationOptions],
     queryFn: async () => {
       const orgAdapter = createOrgAdapter();
-      const workspaces = await orgAdapter.getOrgWorkspaces(
-        orgId,
-        paginationOptions
+
+      // Use listWorkspaces instead of getOrgWorkspaces
+      const workspaces = await orgAdapter.listWorkspaces(
+        orgId
+        // Note: The adapter's listWorkspaces method doesn't support pagination options
       );
 
       // Validate the response data
@@ -49,7 +51,9 @@ export function useOrgWorkspace(workspaceId: string) {
     queryKey: queryKeys.org.workspaces.detail(workspaceId),
     queryFn: async () => {
       const orgAdapter = createOrgAdapter();
-      const workspace = await orgAdapter.getOrgWorkspace(workspaceId);
+
+      // Use getWorkspace instead of getOrgWorkspace
+      const workspace = await orgAdapter.getWorkspace(workspaceId);
 
       // Validate the response data
       return orgWorkspaceSchema.parse(workspace);

@@ -25,7 +25,7 @@ export async function recordActivity(
 
     // Record the activity
     const orgAdapter = createOrgAdapter();
-    const activity = await orgAdapter.recordOrgActivity(validatedInput);
+    const activity = await orgAdapter.recordActivity(validatedInput);
 
     // Revalidate the organization activity page
     revalidatePath(`/organizations/${input.orgId}/activity`);

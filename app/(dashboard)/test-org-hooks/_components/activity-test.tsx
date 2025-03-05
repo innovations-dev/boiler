@@ -58,7 +58,7 @@ const orgIdSchema = z.object({
 const recordActivitySchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   action: z.string().min(1, 'Action is required'),
-  resource: z.string().min(1, 'Resource is required'),
+  resourceType: z.string().min(1, 'Resource type is required'),
   resourceId: z.string().optional(),
   metadata: z.string().optional(),
 });
@@ -92,7 +92,7 @@ export function ActivityTestSection() {
     defaultValues: {
       userId: '',
       action: '',
-      resource: '',
+      resourceType: '',
       resourceId: '',
       metadata: '',
     },
@@ -139,7 +139,7 @@ export function ActivityTestSection() {
       orgId,
       userId: values.userId,
       action: values.action,
-      resourceType: values.resource,
+      resourceType: values.resourceType,
       ...(values.resourceId ? { resourceId: values.resourceId } : {}),
       ...(metadata ? { metadata } : {}),
     };
@@ -233,7 +233,7 @@ export function ActivityTestSection() {
                       <div>{activity.action}</div>
 
                       <div className="font-semibold">Resource Type:</div>
-                      <div>{activity.resource}</div>
+                      <div>{activity.resourceType}</div>
 
                       {activity.resourceId && (
                         <>
@@ -360,7 +360,7 @@ export function ActivityTestSection() {
 
                 <FormField
                   control={recordActivityForm.control}
-                  name="resource"
+                  name="resourceType"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Resource</FormLabel>
