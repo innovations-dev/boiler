@@ -82,11 +82,6 @@ export const queryKeys = {
     create: (userId: string, slug?: string | null) =>
       ['organizations', 'create', userId, slug] as const,
     detail: (slug: string) => ['organizations', slug] as const,
-    metrics: {
-      all: (slug: string) => ['organizations', slug, 'metrics'] as const,
-      activeSessions: (slug: string) =>
-        ['organizations', slug, 'metrics', 'active-sessions'] as const,
-    },
     members: {
       all: (slug: string) => ['organizations', slug, 'members'] as const,
       detail: (slug: string, memberId: string) =>
@@ -102,59 +97,6 @@ export const queryKeys = {
      */
     permissions: (organizationId: string, permission: string) =>
       ['organizations', organizationId, 'permissions', permission] as const,
-    settings: (slug: string) => ['organizations', slug, 'settings'] as const,
-    /** Extensions for organization functionality */
-    extensions: {
-      /** All extension-related queries */
-      all: () => ['organization-extensions'] as const,
-      /** Get organization metrics by ID
-       * @param {string} organizationId - Organization ID
-       */
-      metrics: (organizationId: string) =>
-        ['organization-extensions', 'metrics', organizationId] as const,
-      /** Get organization activity by ID
-       * @param {string} organizationId - Organization ID
-       */
-      activity: (organizationId: string) =>
-        ['organization-extensions', 'activity', organizationId] as const,
-      /** Get active sessions for an organization
-       * @param {string} organizationId - Organization ID
-       */
-      activeSessions: (organizationId: string) =>
-        ['organization-extensions', 'active-sessions', organizationId] as const,
-      /** Workspace-related queries */
-      workspaces: {
-        /** Get all workspaces for an organization
-         * @param {string} organizationId - Organization ID
-         */
-        all: (organizationId: string) =>
-          ['organization-extensions', 'workspaces', organizationId] as const,
-        /** Get workspace by ID
-         * @param {string} workspaceId - Workspace ID
-         */
-        detail: (workspaceId: string) =>
-          [
-            'organization-extensions',
-            'workspaces',
-            'detail',
-            workspaceId,
-          ] as const,
-      },
-      /** Get enhanced organization data by slug
-       * @param {string} slug - Organization slug
-       */
-      enhanced: (slug: string) =>
-        ['organization-extensions', 'enhanced', slug] as const,
-    },
-  },
-  /** Workspace-related query keys */
-  workspaces: {
-    /** Get all workspaces */
-    all: () => ['workspaces'] as const,
-    /** Get workspace by ID
-     * @param {string} id - Workspace ID
-     */
-    detail: (id: string) => ['workspaces', id] as const,
   },
   /** Session-related query keys */
   session: {

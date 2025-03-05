@@ -22,38 +22,10 @@ export const cacheConfig = {
       staleTime: 60 * 1000, // 1 minute
       gcTime: 5 * 60 * 1000, // 5 minutes
     },
-    // Organization data - can be cached longer
-    organization: {
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
-    },
-    // Organization extensions - different caching strategies based on data type
-    organizationExtensions: {
-      // Metrics need to be relatively fresh
-      metrics: {
-        staleTime: 2 * 60 * 1000, // 2 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
-      },
-      // Activity can be cached longer
-      activity: {
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 15 * 60 * 1000, // 15 minutes
-      },
-      // Active sessions should be relatively fresh
-      activeSessions: {
-        staleTime: 1 * 60 * 1000, // 1 minute
-        gcTime: 5 * 60 * 1000, // 5 minutes
-      },
-      // Workspaces don't change often
-      workspaces: {
-        staleTime: 15 * 60 * 1000, // 15 minutes
-        gcTime: 30 * 60 * 1000, // 30 minutes
-      },
-    },
-    // Workspace data - follows organization pattern
-    workspace: {
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes
+    // Organization data - moderate caching
+    organizations: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
     },
     session: {
       staleTime: 5 * 60 * 1000, // 5 minutes
@@ -102,8 +74,7 @@ export const cacheConfig = {
  * Different cache durations are configured for various data types:
  * - Default: 5min stale / 10min garbage collection
  * - User data: 1min stale / 5min garbage collection
- * - Organization data: 10min stale / 30min garbage collection
- * - Organization extensions: Varies by data type (see config)
+ * - Organization data: 5min stale / 10min garbage collection
  * - Static data: 24h stale / 48h garbage collection
  */
 export function configureCacheDefaults(queryClient: QueryClient) {
@@ -124,18 +95,6 @@ export function configureCacheDefaults(queryClient: QueryClient) {
  * @returns Cache settings for the specified query type
  */
 export function getCacheSettings(type: string, subType?: string) {
-  if (
-    type === 'organizationExtensions' &&
-    subType &&
-    cacheConfig.queries.organizationExtensions[
-      subType as keyof typeof cacheConfig.queries.organizationExtensions
-    ]
-  ) {
-    return cacheConfig.queries.organizationExtensions[
-      subType as keyof typeof cacheConfig.queries.organizationExtensions
-    ];
-  }
-
   return (
     cacheConfig.queries[type as keyof typeof cacheConfig.queries] ||
     cacheConfig.queries.default

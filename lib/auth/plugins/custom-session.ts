@@ -20,8 +20,6 @@ export async function customSession({
     const member = await organizationService.getActiveMember(user.id);
     const activeOrganizationId = member?.organizationId;
 
-    // TODO: implement workspaces
-    // const activeWorkspace = await getActiveWorkspace();
     logger.debug('updating session', {
       context: 'auth config',
       component: 'customSession',
@@ -33,8 +31,6 @@ export async function customSession({
       ...session,
       user,
       activeOrganizationId,
-      // TODO: implement workspaces
-      // activeWorkspaceId: activeWorkspace?.id, // TODO: is this correct?
     };
   } catch (error) {
     logger.error(
@@ -49,8 +45,6 @@ export async function customSession({
       session,
       user,
       activeOrganizationId: null,
-      // TODO: implement workspaces
-      // activeWorkspaceId: null, // TODO: is this correct?
     };
   }
 }

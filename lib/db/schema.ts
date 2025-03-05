@@ -1,14 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-// Import organization extensions schema
-import {
-  organizationActivities,
-  organizationCustomPermissions,
-  organizationMetrics,
-  organizationWorkspaces,
-} from './schema/organization-extensions';
-
 export const user = sqliteTable(
   'user',
   {
@@ -207,9 +199,6 @@ export const organizationRelations = relations(organization, ({ many }) => ({
   invitations: many(invitation),
   activeSessions: many(session, { relationName: 'activeOrganization' }),
   users: many(usersToOrganizations),
-  metrics: many(organizationMetrics),
-  activities: many(organizationActivities),
-  workspaces: many(organizationWorkspaces),
 }));
 
 export const memberRelations = relations(member, ({ one }) => ({
@@ -233,65 +222,3 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
     references: [organization.id],
   }),
 }));
-
-// Organization extensions relations
-export const organizationMetricsRelations = relations(
-  organizationMetrics,
-  ({ one }) => ({
-    organization: one(organization, {
-      fields: [organizationMetrics.organizationId],
-      references: [organization.id],
-    }),
-  })
-);
-
-export const organizationActivitiesRelations = relations(
-  organizationActivities,
-  ({ one }) => ({
-    organization: one(organization, {
-      fields: [organizationActivities.organizationId],
-      references: [organization.id],
-    }),
-    user: one(user, {
-      fields: [organizationActivities.userId],
-      references: [user.id],
-    }),
-  })
-);
-
-export const organizationWorkspacesRelations = relations(
-  organizationWorkspaces,
-  ({ one }) => ({
-    organization: one(organization, {
-      fields: [organizationWorkspaces.organizationId],
-      references: [organization.id],
-    }),
-  })
-);
-
-export const organizationCustomPermissionsRelations = relations(
-  organizationCustomPermissions,
-  ({ one }) => ({
-    organization: one(organization, {
-      fields: [organizationCustomPermissions.organizationId],
-      references: [organization.id],
-    }),
-    user: one(user, {
-      fields: [organizationCustomPermissions.userId],
-      references: [user.id],
-    }),
-    createdByUser: one(user, {
-      fields: [organizationCustomPermissions.createdBy],
-      references: [user.id],
-      relationName: 'permissionCreator',
-    }),
-  })
-);
-
-// Export organization extensions schema
-export {
-  organizationMetrics,
-  organizationActivities,
-  organizationWorkspaces,
-  organizationCustomPermissions,
-};

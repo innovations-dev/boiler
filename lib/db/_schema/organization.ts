@@ -71,9 +71,6 @@ export const organizationActivitySchema = z.object({
     'member_removed',
     'member_role_updated',
     'organization_updated',
-    'workspace_created',
-    'workspace_updated',
-    'workspace_deleted',
   ]),
   details: z.record(z.unknown()),
   createdAt: z.date(),
@@ -88,20 +85,6 @@ export const organizationActivitySchema = z.object({
 });
 
 export type OrganizationActivity = z.infer<typeof organizationActivitySchema>;
-
-// Organization workspace schema
-export const organizationWorkspaceSchema = z.object({
-  id: z.string(),
-  organizationId: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  createdBy: z.string(),
-  updatedBy: z.string(),
-});
-
-export type OrganizationWorkspace = z.infer<typeof organizationWorkspaceSchema>;
 
 // Organization invitation schema
 export const organizationInvitationSchema = z.object({
@@ -119,32 +102,9 @@ export type OrganizationInvitation = z.infer<
   typeof organizationInvitationSchema
 >;
 
-// ===== Request Schemas =====
-
-export const createWorkspaceRequestSchema = z.object({
-  organizationId: z.string(),
-  name: z.string(),
-  createdBy: z.string(),
-});
-
-export type CreateWorkspaceRequest = z.infer<
-  typeof createWorkspaceRequestSchema
->;
-
-export const updateWorkspaceRequestSchema =
-  createWorkspaceRequestSchema.partial();
-
-export type UpdateWorkspaceRequest = z.infer<
-  typeof updateWorkspaceRequestSchema
->;
-
 // ===== Permission Schemas =====
 
-export const resourceTypeSchema = z.enum([
-  'organization',
-  'workspace',
-  'project',
-]);
+export const resourceTypeSchema = z.enum(['organization', 'project']);
 
 export type ResourceType = z.infer<typeof resourceTypeSchema>;
 
