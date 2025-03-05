@@ -3,6 +3,8 @@
  *
  * This service provides typed methods for interacting with Better-Auth organization endpoints.
  * It handles authentication, error handling, and response parsing.
+ *
+ * @deprecated Use new better-auth plugin implementation instead
  */
 
 import { logger } from '@/lib/logger';

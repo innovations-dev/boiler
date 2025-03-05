@@ -74,33 +74,41 @@ export const queryKeys = {
   },
   /** Organization-related query keys */
   organizations: {
-    /** Get all organizations */
-    all: () => ['organizations'] as const,
-    /** Get organization by ID
-     * @param {string} id - Organization ID
-     */
-    create: (userId: string, slug?: string | null) =>
-      ['organizations', 'create', userId, slug] as const,
-    detail: (slug: string) => ['organizations', slug] as const,
-    members: {
-      all: (slug: string) => ['organizations', slug, 'members'] as const,
-      detail: (slug: string, memberId: string) =>
-        ['organizations', slug, 'members', memberId] as const,
-    },
+    /** @deprecated Use new better-auth plugin implementation instead  */
     invitations: {
-      all: (slug: string) => ['organizations', slug, 'invitations'] as const,
+      // all: (slug: string) => ['organizations', slug, 'invitations'] as const,
+      // Currentled used by app/(auth)/accept-invitation/[id]/page.tsx
       detail: (id: string) => ['organizations', 'invitations', id] as const,
     },
-    /** Permission-related query keys
-     * @param {string} organizationId - Organization ID
-     * @param {string} permission - Permission to check
-     */
-    permissions: (organizationId: string, permission: string) =>
-      ['organizations', organizationId, 'permissions', permission] as const,
   },
   /** Session-related query keys */
   session: {
     /** Get current session */
     current: () => ['session'] as const,
+  },
+  /** Organization plugin query keys */
+  org: {
+    /** Get metrics for an organization
+     * @param {string} orgId - Organization ID
+     */
+    metrics: (orgId: string) => ['org', 'metrics', orgId] as const,
+    /** Get activity for an organization
+     * @param {string} orgId - Organization ID
+     */
+    activity: (orgId: string) => ['org', 'activity', orgId] as const,
+    /** Get workspaces for an organization
+     * @param {string} orgId - Organization ID
+     */
+    workspaces: {
+      /** Get all workspaces for an organization
+       * @param {string} orgId - Organization ID
+       */
+      all: (orgId: string) => ['org', 'workspaces', orgId] as const,
+      /** Get a specific workspace
+       * @param {string} workspaceId - Workspace ID
+       */
+      detail: (workspaceId: string) =>
+        ['org', 'workspaces', 'detail', workspaceId] as const,
+    },
   },
 } as const;

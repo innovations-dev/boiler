@@ -1,3 +1,7 @@
+/**
+ * @fileoverview
+ * @deprecated Use new better-auth plugin implementation instead
+ */
 import type { BetterAuthOptions, Session } from 'better-auth';
 import { UserWithRole } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
