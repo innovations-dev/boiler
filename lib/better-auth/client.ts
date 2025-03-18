@@ -153,6 +153,7 @@ export class BetterAuthClient {
    */
   async post<T>(
     endpoint: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: Record<string, any>,
     options: RequestInit = {}
   ): Promise<BetterAuthResponse<T>> {
@@ -168,6 +169,7 @@ export class BetterAuthClient {
    */
   async put<T>(
     endpoint: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: Record<string, any>,
     options: RequestInit = {}
   ): Promise<BetterAuthResponse<T>> {
@@ -202,6 +204,7 @@ export const authClient = createAuthClient({
 });
 
 // Helper function to handle errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function handleBetterFetchError(error: any): never {
   // Log the error for debugging
   logger.error('Better-Auth fetch error', {

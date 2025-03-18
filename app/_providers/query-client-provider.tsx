@@ -12,10 +12,10 @@ interface QueryErrorType {
   code?: string;
 }
 
-interface QueryMetaType {
-  queryKey?: unknown[];
-  mutationKey?: unknown[];
-}
+// interface QueryMetaType {
+//   queryKey?: unknown[];
+//   mutationKey?: unknown[];
+// }
 
 /**
  * Creates a query client with default error handling and logging

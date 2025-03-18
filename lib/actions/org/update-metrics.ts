@@ -33,7 +33,7 @@ export async function updateMetrics(
 
     // Update the metrics
     const orgAdapter = createOrgAdapter();
-    const metrics = await orgAdapter.updateOrgMetrics(validatedInput);
+    const metrics = await orgAdapter.updateOrgMetrics(orgId, validatedInput);
 
     // Revalidate the organization dashboard page
     revalidatePath(`/organizations/${orgId}/dashboard`);

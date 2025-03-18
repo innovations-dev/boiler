@@ -5,7 +5,6 @@
  * in Next.js applications using Better-Auth.
  */
 
-import { headers } from 'next/headers';
 import { type NextRequest } from 'next/server';
 
 import { auth } from '@/lib/auth';
@@ -24,6 +23,7 @@ interface DeviceSession {
   id: string;
   userId: string;
   isActive?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -156,9 +156,7 @@ export async function validateSession(
         });
 
         // Check if listSessions method exists (for multi-session support)
-        // @ts-ignore - Better-Auth types are not up to date
         if (typeof auth.api.listSessions === 'function') {
-          // @ts-ignore - Better-Auth types are not up to date
           const sessions = await auth.api.listSessions({
             headers: req.headers,
           });
@@ -178,16 +176,15 @@ export async function validateSession(
 
               // Get user information - we need to make a separate call to get user details
               try {
-                // @ts-ignore - Better-Auth types are not up to date
-                const userInfo = await auth.api.getUser({
+                const session = await auth.api.getSession({
                   headers: req.headers,
                 });
 
-                if (userInfo) {
+                if (session?.user) {
                   return {
                     user: {
-                      id: userInfo.id,
-                      email: userInfo.email || 'unknown',
+                      id: session.user.id,
+                      email: session.user.email || 'unknown',
                     },
                     sessionId: activeSession.id,
                   };

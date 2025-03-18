@@ -222,3 +222,40 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
     references: [organization.id],
   }),
 }));
+
+export const orgActivity = sqliteTable(
+  'org_activity',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(),
+    resourceType: text('resource_type').notNull(),
+    resourceId: text('resource_id').notNull(),
+    timestamp: integer('timestamp', { mode: 'timestamp' })
+      .default(sql`unixepoch()`)
+      .notNull(),
+    metadata: text('metadata'), // JSON string
+  },
+  (t) => [
+    index('activity_org_idx').on(t.orgId),
+    index('activity_user_idx').on(t.userId),
+    index('activity_resource_idx').on(t.resourceType, t.resourceId),
+    index('activity_timestamp_idx').on(t.timestamp),
+  ]
+);
+
+export const orgActivityRelations = relations(orgActivity, ({ one }) => ({
+  organization: one(organization, {
+    fields: [orgActivity.orgId],
+    references: [organization.id],
+  }),
+  user: one(user, {
+    fields: [orgActivity.userId],
+    references: [user.id],
+  }),
+}));

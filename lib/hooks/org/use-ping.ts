@@ -8,6 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { createOrgAdapter } from '@/lib/adapters/factory';
+import { getCacheSettings } from '@/lib/query/cache-config';
 
 /**
  * Hook for pinging the custom org plugin
@@ -20,5 +21,7 @@ export function usePing() {
       const orgAdapter = createOrgAdapter();
       return orgAdapter.ping();
     },
+    // Use the specific cache settings for ping requests
+    ...getCacheSettings('ping'),
   });
 }

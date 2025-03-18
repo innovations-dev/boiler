@@ -6,14 +6,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { z } from 'zod';
 
 import { createOrgAdapter } from '@/lib/adapters/factory';
+import { getCacheSettings } from '@/lib/query/cache-config';
 import { queryKeys } from '@/lib/query/keys';
-import {
-  orgActivitySchema,
-  paginationOptionsSchema,
-} from '@/lib/schemas/org-schemas';
+import { orgActivitySchema } from '@/lib/schemas/org-schemas';
 
 /**
  * Interface for pagination options
@@ -57,5 +54,7 @@ export function useOrgActivity(
       return orgActivitySchema.array().parse(activity);
     },
     enabled: Boolean(orgId),
+    // Use the specific cache settings for organization activity
+    ...getCacheSettings('org', 'activity'),
   });
 }

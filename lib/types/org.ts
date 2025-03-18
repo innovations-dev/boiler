@@ -46,7 +46,7 @@ export interface OrgMetrics {
   /**
    * Additional metrics specific to the organization
    */
-  additionalMetrics?: Record<string, any>;
+  additionalMetrics?: Record<string, unknown>;
 }
 
 /**
@@ -73,7 +73,7 @@ export interface UpdateMetricsInput {
   /**
    * Additional metrics specific to the organization
    */
-  additionalMetrics?: Record<string, any>;
+  additionalMetrics?: Record<string, unknown>;
 }
 
 /**
@@ -121,7 +121,7 @@ export interface OrgActivity {
   /**
    * Additional metadata about the activity
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -158,7 +158,7 @@ export interface RecordActivityInput {
   /**
    * Additional metadata about the activity
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -206,7 +206,7 @@ export interface OrgWorkspace {
   /**
    * Additional metadata about the workspace
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -238,7 +238,7 @@ export interface CreateWorkspaceInput {
   /**
    * Additional metadata about the workspace
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -260,5 +260,5 @@ export interface UpdateWorkspaceInput {
   /**
    * Additional metadata about the workspace
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }

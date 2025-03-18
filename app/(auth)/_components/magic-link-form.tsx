@@ -31,7 +31,7 @@ import { magicLinkSchema, type MagicLinkInput } from '../_types';
 
 export function MagicLinkForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/organizations';
+  const callbackUrl = searchParams?.get('callbackUrl') || '/organizations';
 
   const form = useForm<MagicLinkInput>({
     resolver: zodResolver(magicLinkSchema),

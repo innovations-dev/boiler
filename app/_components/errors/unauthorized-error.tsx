@@ -11,7 +11,7 @@ export function UnauthorizedError() {
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Unauthorized Access</AlertTitle>
       <AlertDescription className="flex items-center gap-x-2">
-        You don't have permission to access this resource.
+        You don&apos;t have permission to access this resource.
         <Button
           variant="outline"
           size="sm"

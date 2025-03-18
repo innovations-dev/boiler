@@ -130,7 +130,9 @@ export function ActivityTestSection() {
       try {
         metadata = JSON.parse(values.metadata);
       } catch (e) {
-        toast.error('Invalid JSON in metadata field');
+        toast.error(
+          e instanceof Error ? e.message : 'Invalid JSON in metadata field'
+        );
         return;
       }
     }
@@ -152,7 +154,9 @@ export function ActivityTestSection() {
         recordActivityForm.reset();
       },
       onError: (error) => {
-        toast.error('Error recording activity');
+        toast.error(
+          error instanceof Error ? error.message : 'Error recording activity'
+        );
       },
     });
   };

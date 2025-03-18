@@ -17,13 +17,7 @@ import { z } from 'zod';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -158,13 +152,13 @@ export function WorkspacesTestSection() {
     });
   };
 
-  // Handle workspace ID form submission
-  const onWorkspaceIdSubmit = (values: z.infer<typeof workspaceIdSchema>) => {
-    setSelectedWorkspaceId(values.workspaceId);
-    toast.info('Fetching workspace', {
-      description: `Fetching workspace: ${values.workspaceId}`,
-    });
-  };
+  // // Handle workspace ID form submission
+  // const onWorkspaceIdSubmit = (values: z.infer<typeof workspaceIdSchema>) => {
+  //   setSelectedWorkspaceId(values.workspaceId);
+  //   toast.info('Fetching workspace', {
+  //     description: `Fetching workspace: ${values.workspaceId}`,
+  //   });
+  // };
 
   // Handle create workspace form submission
   const onCreateWorkspaceSubmit = (
@@ -184,7 +178,8 @@ export function WorkspacesTestSection() {
         metadata = JSON.parse(values.metadata);
       } catch (e) {
         toast.error('Error', {
-          description: 'Invalid JSON in metadata field',
+          description:
+            e instanceof Error ? e.message : 'Invalid JSON in metadata field',
         });
         return;
       }
@@ -231,7 +226,8 @@ export function WorkspacesTestSection() {
         metadata = JSON.parse(values.metadata);
       } catch (e) {
         toast.error('Error', {
-          description: 'Invalid JSON in metadata field',
+          description:
+            e instanceof Error ? e.message : 'Invalid JSON in metadata field',
         });
         return;
       }

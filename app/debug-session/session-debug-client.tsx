@@ -43,7 +43,8 @@ export function SessionDebugClient({ className }: SessionDebugClientProps) {
           try {
             const value = localStorage.getItem(key);
             localStorageItems[key] = value || '';
-          } catch (e) {
+          } catch (e: unknown) {
+            console.error('Error reading value', e);
             localStorageItems[key] = 'Error reading value';
           }
         }

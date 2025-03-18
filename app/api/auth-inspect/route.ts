@@ -140,6 +140,7 @@ export async function GET(req: NextRequest) {
                     obj[key] = value;
                     return obj;
                   },
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   {} as Record<string, any>
                 ),
             }
@@ -156,6 +157,7 @@ export async function GET(req: NextRequest) {
                     obj[key] = value;
                     return obj;
                   },
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   {} as Record<string, any>
                 ),
             }
@@ -168,6 +170,7 @@ export async function GET(req: NextRequest) {
               obj[key] = value;
               return obj;
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             {} as Record<string, any>
           ),
       },

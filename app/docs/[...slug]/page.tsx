@@ -34,6 +34,14 @@ export async function generateMetadata({
       path: `/docs/${resolvedParams.slug.join('/')}`,
     });
   } catch (error) {
+    logger.error(
+      'Failed to generate metadata',
+      {
+        component: 'DocsPage',
+        path: resolvedParams.slug.join('/'),
+      },
+      error
+    );
     return baseGenerateMetadata({
       title: 'Documentation',
       description: 'Nextjs v15 Boilerplate Documentation',

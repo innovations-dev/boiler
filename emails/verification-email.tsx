@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 import {
   Body,
   Container,
@@ -12,10 +12,10 @@ import {
   Section,
   Tailwind,
   Text,
-} from "@react-email/components";
-import { render } from "@react-email/render";
+} from '@react-email/components';
+import { render } from '@react-email/render';
 
-import tailwindConfig from "@/tailwind.config";
+import tailwindConfig from '@/tailwind.config';
 
 interface VerificationEmailProps {
   url: string;
@@ -24,7 +24,7 @@ interface VerificationEmailProps {
 export default function VerificationEmail({ url }: VerificationEmailProps) {
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+    : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000');
 
   return (
     <Html>
@@ -76,14 +76,14 @@ export default function VerificationEmail({ url }: VerificationEmailProps) {
                 <Link href={`${baseUrl}`} className="text-[#666666] underline">
                   Your Company, Inc
                 </Link>
-                {" • "}
+                {' • '}
                 <Link
                   href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy Policy
                 </Link>
-                {" • "}
+                {' • '}
                 <Link
                   href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"

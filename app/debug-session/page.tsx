@@ -1,24 +1,13 @@
 import { Suspense } from 'react';
-import { headers } from 'next/headers';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { auth } from '@/lib/auth';
 
-import { SessionDebugClient } from './session-debug-client';
 import { SessionDebugServer } from './session-debug-server';
 import { SessionTestClient } from './session-test-client';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DebugSessionPage() {
-  // Get headers asynchronously
-  const headersList = await headers();
-
-  // Get session with headers
-  const session = await auth.api.getSession({
-    headers: headersList,
-  });
-
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">Session Debugging Tools</h1>

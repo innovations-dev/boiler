@@ -1,10 +1,7 @@
 export {};
 
 declare module 'better-auth' {
-  import type {
-    SessionWithImpersonatedBy,
-    UserWithRole,
-  } from 'better-auth/plugins';
+  import type { SessionWithImpersonatedBy } from 'better-auth/plugins';
 
   interface Session extends SessionWithImpersonatedBy {
     id: string;

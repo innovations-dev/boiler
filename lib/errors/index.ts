@@ -181,12 +181,18 @@ const errorHandlers = {
     message: 'Validation failed',
     code: ERROR_CODES.VALIDATION_ERROR,
     status: 400,
+    details: {
+      zodError: error.errors,
+    },
   }),
 
   [AppDatabaseError.name]: (error: AppDatabaseError): ErrorResponse => ({
     message: 'Database error occurred',
     code: ERROR_CODES.INTERNAL_SERVER_ERROR,
     status: 500,
+    details: {
+      cause: error.cause,
+    },
   }),
 
   [Error.name]: (error: ErrorWithCode): ErrorResponse => ({
@@ -195,6 +201,9 @@ const errorHandlers = {
       (error.code as keyof typeof ERROR_CODES) ??
       ERROR_CODES.INTERNAL_SERVER_ERROR,
     status: 500,
+    details: {
+      cause: error.cause,
+    },
   }),
 } as const;
 

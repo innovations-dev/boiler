@@ -30,7 +30,7 @@ export const orgMetricsSchema = z.object({
   lastUpdated: z
     .union([z.string(), z.date()])
     .transform((val) => (typeof val === 'string' ? val : val.toISOString())),
-  additionalMetrics: z.record(z.any()).optional(),
+  additionalMetrics: z.record(z.unknown()).optional(),
 });
 
 export type OrgMetricsSchema = z.infer<typeof orgMetricsSchema>;
@@ -44,7 +44,7 @@ export const updateMetricsInputSchema = z.object({
   totalWorkspaces: z
     .union([z.string(), z.number().int().nonnegative()])
     .optional(),
-  additionalMetrics: z.record(z.any()).optional(),
+  additionalMetrics: z.record(z.unknown()).optional(),
 });
 
 export type UpdateMetricsInputSchema = z.infer<typeof updateMetricsInputSchema>;
@@ -59,7 +59,7 @@ export const orgActivitySchema = z.object({
   action: z.string(),
   resourceType: z.string(),
   resourceId: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
   timestamp: z
     .union([z.string().datetime(), z.date()])
     .transform((val) => (typeof val === 'string' ? val : val.toISOString())),
@@ -76,7 +76,7 @@ export const recordActivityInputSchema = z.object({
   action: z.string(),
   resourceType: z.string(),
   resourceId: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type RecordActivityInputSchema = z.infer<
@@ -99,7 +99,7 @@ export const orgWorkspaceSchema = z.object({
     .union([z.string().datetime(), z.date()])
     .transform((val) => (typeof val === 'string' ? val : val.toISOString()))
     .optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type OrgWorkspaceSchema = z.infer<typeof orgWorkspaceSchema>;
@@ -112,7 +112,7 @@ export const createWorkspaceInputSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   createdBy: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type CreateWorkspaceInputSchema = z.infer<
@@ -125,7 +125,7 @@ export type CreateWorkspaceInputSchema = z.infer<
 export const updateWorkspaceInputSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type UpdateWorkspaceInputSchema = z.infer<

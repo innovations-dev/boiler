@@ -14,12 +14,8 @@
  */
 
 import type { BetterAuthPlugin } from 'better-auth';
-import { createAuthEndpoint } from 'better-auth/api';
-
-import { createOrgAdapter } from '@/lib/adapters/factory';
 
 import * as endpoints from './endpoints';
-import * as schemas from './schemas';
 
 /**
  * Organization Plugin
@@ -80,7 +76,7 @@ export function orgPlugin(): BetterAuthPlugin {
     },
 
     // Add onRequest hook for request interception
-    onRequest: async (request, ctx) => {
+    onRequest: async (request) => {
       // Log requests to organization endpoints for debugging
       if (request.url && new URL(request.url).pathname.startsWith('/org/')) {
         console.log(`Request to ${new URL(request.url).pathname}`);
@@ -90,7 +86,7 @@ export function orgPlugin(): BetterAuthPlugin {
     },
 
     // Add onResponse hook for response modification
-    onResponse: async (response, ctx) => {
+    onResponse: async (response) => {
       // Log responses from organization endpoints
       // We can't access the original URL directly from the response
       // so we'll just log that a response was processed

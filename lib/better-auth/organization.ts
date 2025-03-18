@@ -20,6 +20,9 @@ const getHeaders = async () => {
     return headers();
   } catch (error) {
     // We're in a client component, return empty headers
+    logger.error('Error getting headers', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {};
   }
 };
@@ -30,6 +33,7 @@ export interface Organization {
   name: string;
   slug: string;
   logo?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -76,6 +80,7 @@ export const organizationService = {
       name: string;
       slug?: string;
       logo?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       metadata?: Record<string, any>;
     },
     options?: { headers?: HeadersInit }
@@ -107,6 +112,7 @@ export const organizationService = {
       name?: string;
       slug?: string;
       logo?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       metadata?: Record<string, any>;
     },
     options?: { headers?: HeadersInit }

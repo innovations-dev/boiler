@@ -44,12 +44,12 @@ export const errorSchema = z.object({
     ERROR_CODES.TEMPLATE_ERROR,
   ]),
   status: z.number(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.unknown()).optional(),
 });
 
 export interface ErrorResponse {
   message: string;
   code: ErrorCode;
   status: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }

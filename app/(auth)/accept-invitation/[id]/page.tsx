@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CheckIcon, Loader2, XIcon } from 'lucide-react';
 
@@ -34,11 +34,13 @@ interface Invitation {
   inviterId: string;
 }
 
-export default function InvitationPage() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
-
+export default function AcceptInvitationPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const { data: session } = authClient.useSession();
+  const router = useRouter();
 
   const { data: invitation, isLoading: isLoadingInvitation } =
     useQuery<Invitation>({
@@ -48,10 +50,7 @@ export default function InvitationPage() {
           query: { id: params.id },
         });
         if (!response.data) {
-          throw new AppError('Failed to fetch invitation', {
-            code: ERROR_CODES.BAD_REQUEST,
-            status: 400,
-          });
+          throw new Error('Invitation not found');
         }
         return response.data as Invitation;
       },

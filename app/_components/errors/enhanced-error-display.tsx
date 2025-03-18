@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { AlertCircle, AlertTriangle, Ban, Info, RefreshCw } from 'lucide-react';
 
 import {

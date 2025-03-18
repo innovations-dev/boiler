@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 import {
   Body,
   Container,
@@ -12,10 +12,10 @@ import {
   Section,
   Tailwind,
   Text,
-} from "@react-email/components";
-import { render } from "@react-email/render";
+} from '@react-email/components';
+import { render } from '@react-email/render';
 
-import tailwindConfig from "@/tailwind.config";
+import tailwindConfig from '@/tailwind.config';
 
 interface InvitationEmailProps {
   url: string;
@@ -30,7 +30,7 @@ export default function InvitationEmail({
 }: InvitationEmailProps) {
   const baseUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+    : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000');
 
   return (
     <Html>
@@ -54,7 +54,7 @@ export default function InvitationEmail({
             </Heading>
 
             <Text className="m-0 mb-4 text-center text-base leading-[24px] text-[#484848]">
-              You have been invited to join {organizationName} by{" "}
+              You have been invited to join {organizationName} by{' '}
               {invitedByUsername}.
             </Text>
 
@@ -87,14 +87,14 @@ export default function InvitationEmail({
                 <Link href={`${baseUrl}`} className="text-[#666666] underline">
                   Your Company, Inc
                 </Link>
-                {" • "}
+                {' • '}
                 <Link
                   href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy Policy
                 </Link>
-                {" • "}
+                {' • '}
                 <Link
                   href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"

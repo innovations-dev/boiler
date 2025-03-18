@@ -1,10 +1,11 @@
-import { sendVerificationEmailFn } from 'better-auth/api';
-
 import { sendEmail } from '@/lib/email/service';
 import { logger } from '@/lib/logger';
 
-type Params = Parameters<typeof sendVerificationEmailFn>;
-
+/**
+ * Send a verification email to the user
+ * @param email - The email address of the user
+ * @param url - The URL to verify the email
+ */
 export async function sendVerificationEmail({
   email,
   url,

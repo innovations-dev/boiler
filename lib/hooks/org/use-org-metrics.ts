@@ -6,9 +6,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { z } from 'zod';
 
 import { createOrgAdapter } from '@/lib/adapters/factory';
+import { getCacheSettings } from '@/lib/query/cache-config';
 import { queryKeys } from '@/lib/query/keys';
 import { orgMetricsSchema } from '@/lib/schemas/org-schemas';
 
@@ -28,5 +28,7 @@ export function useOrgMetrics(orgId: string) {
       return orgMetricsSchema.parse(metrics);
     },
     enabled: Boolean(orgId),
+    // Use the specific cache settings for organization metrics
+    ...getCacheSettings('org', 'metrics'),
   });
 }

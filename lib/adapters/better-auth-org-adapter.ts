@@ -52,16 +52,16 @@ import type { OrgAdapter } from './org-adapter';
  *
  * @template T The type of data contained in the response
  */
-interface BetterAuthResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  timestamp?: string;
-  error?: {
-    code: string;
-    message: string;
-  };
-}
+// interface BetterAuthResponse<T> {
+//   success: boolean;
+//   data?: T;
+//   message?: string;
+//   timestamp?: string;
+//   error?: {
+//     code: string;
+//     message: string;
+//   };
+// }
 
 /**
  * Better Auth Org Adapter
@@ -83,6 +83,7 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
   private client: {
     $fetch: <T>(
       url: string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options?: { method?: string; body?: any }
     ) => Promise<T>;
   };
@@ -98,6 +99,7 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
     }) as {
       $fetch: <T>(
         url: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         options?: { method?: string; body?: any }
       ) => Promise<T>;
     };
@@ -116,9 +118,11 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
    */
   private async typedFetch<T>(
     url: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: { method?: string; body?: any }
   ): Promise<T> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await this.client.$fetch<any>(url, options);
 
       // Handle error responses
@@ -188,10 +192,24 @@ export class BetterAuthOrgAdapter implements OrgAdapter {
    */
   async recordActivity(activity: RecordActivityInput): Promise<OrgActivity> {
     try {
-      // Now that we've updated the schemas, we can directly pass the activity
+      // Map the input to match the expected format
+      // The schema uses 'resource' but the adapter interface expects 'resourceType'
+      const adaptedActivity = {
+        ...activity,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        resourceType: (activity as any).resource || activity.resourceType,
+      };
+
+      // Remove the 'resource' property if it exists
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((adaptedActivity as any).resource) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (adaptedActivity as any).resource;
+      }
+
       return await this.typedFetch<OrgActivity>(`/org/activity`, {
         method: 'POST',
-        body: activity,
+        body: adaptedActivity,
       });
     } catch (error) {
       throw new Error(

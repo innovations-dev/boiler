@@ -54,7 +54,7 @@ export function useRecordActivity() {
         orgId: validatedInput.orgId,
         userId: validatedInput.userId,
         action: validatedInput.action,
-        resourceType: validatedInput.resource,
+        resourceType: validatedInput.resourceType,
         resourceId: validatedInput.resourceId || '',
         metadata: validatedInput.metadata,
       } as const;

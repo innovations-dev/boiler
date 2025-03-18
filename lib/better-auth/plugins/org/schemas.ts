@@ -24,11 +24,11 @@ import { z } from 'zod';
  */
 export const orgMetricsSchema = z.object({
   orgId: z.string(),
-  activeUsers: z.number(),
-  totalUsers: z.number(),
-  totalWorkspaces: z.number(),
-  lastUpdated: z.string(),
-  additionalMetrics: z.record(z.any()).optional(),
+  activeUsers: z.string().or(z.number()).transform(String),
+  totalUsers: z.string().or(z.number()).transform(String),
+  totalWorkspaces: z.string().or(z.number()).transform(String),
+  lastUpdated: z.string().datetime().optional(),
+  additionalMetrics: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -37,10 +37,10 @@ export const orgMetricsSchema = z.object({
  * This schema defines the structure of data for updating organization metrics.
  */
 export const updateMetricsInputSchema = z.object({
-  activeUsers: z.number().optional(),
-  totalUsers: z.number().optional(),
-  totalWorkspaces: z.number().optional(),
-  additionalMetrics: z.record(z.any()).optional(),
+  activeUsers: z.string().or(z.number()).transform(String).optional(),
+  totalUsers: z.string().or(z.number()).transform(String).optional(),
+  totalWorkspaces: z.string().or(z.number()).transform(String).optional(),
+  additionalMetrics: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -55,8 +55,8 @@ export const orgActivitySchema = z.object({
   action: z.string(),
   resourceType: z.string(),
   resourceId: z.string(),
-  timestamp: z.string(),
-  metadata: z.record(z.any()).optional(),
+  timestamp: z.string().datetime(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -70,7 +70,7 @@ export const recordActivityInputSchema = z.object({
   action: z.string(),
   resourceType: z.string(),
   resourceId: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -84,9 +84,9 @@ export const orgWorkspaceSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   createdBy: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  metadata: z.record(z.any()).optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime().optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -99,7 +99,7 @@ export const createWorkspaceInputSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   createdBy: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 /**
@@ -110,5 +110,5 @@ export const createWorkspaceInputSchema = z.object({
 export const updateWorkspaceInputSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });

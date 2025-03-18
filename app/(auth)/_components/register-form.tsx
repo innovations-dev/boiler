@@ -16,11 +16,9 @@ import {
   FormItem,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  useServerAction,
-  type BetterAuthResponse,
-} from '@/hooks/actions/use-server-action';
+import { useServerAction } from '@/hooks/actions/use-server-action';
 import { authClient } from '@/lib/auth/client';
+import { logger } from '@/lib/logger';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -55,9 +53,30 @@ export function RegisterForm() {
         callbackURL: '/dashboard',
       };
 
-      return authClient.signUp.email(formData) as Promise<
-        BetterAuthResponse<{ status: boolean }>
-      >;
+      try {
+        const response = await authClient.signUp.email(formData);
+        logger.debug('Registration response:', response);
+
+        // Transform the response to match BetterAuthResponse structure
+        // while preserving useful information from the response
+        return {
+          data: {
+            status: true,
+            // You can log the response for debugging if needed
+            // console.log('Registration response:', response);
+          },
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        // Transform error to match BetterAuthError structure
+        return {
+          error: {
+            message: error.message || 'Registration failed',
+            code: error.code || 'UNKNOWN_ERROR',
+            statusCode: error.statusCode || 500,
+          },
+        };
+      }
     },
     schema: registerSchema,
     context: 'register',

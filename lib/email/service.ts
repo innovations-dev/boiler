@@ -50,10 +50,7 @@ const templateComponents = {
   RESET_PASSWORD: ResetPasswordEmail as React.ComponentType<
     TemplateProps['RESET_PASSWORD']
   >,
-  EMAIL_CHANGE: VerificationEmail as React.ComponentType<
-    TemplateProps['EMAIL_CHANGE']
-  >,
-} as const;
+};
 
 /**
  * Sends a templated email using Resend
@@ -98,21 +95,46 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   });
 
   try {
-    const template = templateComponents[options.template];
-    if (!template) {
-      throw new EmailError(
-        `Invalid email template: ${options.template}`,
-        ERROR_CODES.TEMPLATE_ERROR
-      );
+    const templateConfig = emailConfig.templates[options.template];
+    let html: string;
+
+    // Use the pre-rendering functions based on the template type
+    switch (options.template) {
+      case 'MAGIC_LINK':
+        const magicLinkElement = createElement(
+          templateComponents['MAGIC_LINK'],
+          options.data as TemplateProps['MAGIC_LINK']
+        );
+        html = await render(magicLinkElement);
+        break;
+      case 'VERIFICATION':
+        const verificationElement = createElement(
+          templateComponents['VERIFICATION'],
+          options.data as TemplateProps['VERIFICATION']
+        );
+        html = await render(verificationElement);
+        break;
+      case 'INVITATION':
+        const invitationElement = createElement(
+          templateComponents['INVITATION'],
+          options.data as TemplateProps['INVITATION']
+        );
+        html = await render(invitationElement);
+        break;
+      case 'RESET_PASSWORD':
+        const resetPasswordElement = createElement(
+          templateComponents['RESET_PASSWORD'],
+          options.data as TemplateProps['RESET_PASSWORD']
+        );
+        html = await render(resetPasswordElement);
+        break;
+      default:
+        throw new EmailError(
+          `Invalid email template: ${options.template}`,
+          ERROR_CODES.TEMPLATE_ERROR
+        );
     }
 
-    const templateConfig = emailConfig.templates[options.template];
-    const element = createElement(
-      template as React.ComponentType<TemplateProps[typeof options.template]>,
-      options.data as TemplateProps[typeof options.template]
-    );
-
-    const html = await render(element);
     const result = await resend.emails.send({
       from: emailConfig.from,
       to: options.to,

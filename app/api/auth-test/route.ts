@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
-import { authClient } from '@/lib/auth/client';
 import { logger } from '@/lib/logger';
 
 /**
@@ -9,6 +8,7 @@ import { logger } from '@/lib/logger';
  * This is useful for debugging session issues
  */
 export async function GET(req: NextRequest) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Record<string, any> = {
     timestamp: new Date().toISOString(),
     methods: {},
@@ -42,8 +42,13 @@ export async function GET(req: NextRequest) {
     // Test 1: validateRequest
     try {
       results.methods.validateRequest = { status: 'pending' };
-      // @ts-ignore - Better-Auth types are not up to date
-      const validationResult = await authClient.validateRequest(req);
+      const validationResult = await auth.api.getSession({
+        headers: req.headers,
+        query: {
+          // bypass cookie cache to ensure we get the latest session
+          disableCookieCache: true,
+        },
+      });
       results.methods.validateRequest = {
         status: 'success',
         hasSession: !!validationResult,
@@ -67,7 +72,6 @@ export async function GET(req: NextRequest) {
         headersObj.set(key, value);
       });
 
-      // @ts-ignore - Better-Auth types are not up to date
       const sessionResult = await auth.api.getSession({
         headers: headersObj,
         query: {
@@ -92,7 +96,6 @@ export async function GET(req: NextRequest) {
     try {
       results.methods.listSessions = { status: 'pending' };
 
-      // @ts-ignore - Better-Auth types are not up to date
       if (typeof auth.api.listSessions === 'function') {
         // Create headers object from request
         const headersObj = new Headers();
@@ -100,7 +103,6 @@ export async function GET(req: NextRequest) {
           headersObj.set(key, value);
         });
 
-        // @ts-ignore - Better-Auth types are not up to date
         const sessionsResult = await auth.api.listSessions({
           headers: headersObj,
         });
@@ -153,7 +155,6 @@ export async function GET(req: NextRequest) {
       results.methods.validateSession = { status: 'pending' };
 
       // Use Better-Auth's native getSession method directly
-      // @ts-ignore - Better-Auth types are not up to date
       const validationResult = await auth.api.getSession({
         headers: req.headers,
         query: {

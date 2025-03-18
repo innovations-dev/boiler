@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { Session } from 'better-auth';
 
 import { auth } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -43,11 +42,13 @@ export async function GET(req: NextRequest) {
       serverValidation: {
         success: false,
         error: null as string | null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data: null as any,
       },
       apiSession: {
         success: false,
         error: null as string | null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data: null as any,
       },
       errors,
@@ -68,9 +69,9 @@ export async function GET(req: NextRequest) {
           `${sessionCookie.name}=${sessionCookie.value}`
         );
 
-        const mockRequest = new Request('http://localhost', {
-          headers: mockHeaders,
-        });
+        // const mockRequest = new Request('http://localhost', {
+        //   headers: mockHeaders,
+        // });
 
         // Validate the session
         const session = await auth.api.getSession({
@@ -134,7 +135,6 @@ export async function GET(req: NextRequest) {
         const headers = new Headers();
         headers.set('Cookie', `${sessionCookie.name}=${sessionCookie.value}`);
 
-        // @ts-ignore - Better-Auth types are not up to date
         const session = await auth.api.getSession({ headers });
 
         if (session?.user) {
@@ -199,7 +199,6 @@ export async function GET(req: NextRequest) {
         const rawHeaders = new Headers();
         rawHeaders.set('Cookie', cookieHeader);
 
-        // @ts-ignore - Better-Auth types are not up to date
         const rawSession = await auth.api.getSession({ headers: rawHeaders });
 
         if (rawSession?.user) {

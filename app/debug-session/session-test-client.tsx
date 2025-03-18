@@ -130,7 +130,8 @@ export function SessionTestClient() {
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleString();
-    } catch (e) {
+    } catch (e: unknown) {
+      console.error('Error formatting date', e);
       return dateString;
     }
   };

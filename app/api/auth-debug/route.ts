@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger';
  * Uses only native Better-Auth methods
  */
 export async function GET(req: NextRequest) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Record<string, any> = {
     timestamp: new Date().toISOString(),
     cookies: {},
@@ -40,7 +41,6 @@ export async function GET(req: NextRequest) {
     });
 
     // Get session using Better-Auth's native method
-    // @ts-ignore - Better-Auth types are not up to date
     const session = await auth.api.getSession({
       headers: req.headers,
       query: {
@@ -54,7 +54,6 @@ export async function GET(req: NextRequest) {
         email: session.user.email,
         sessionId: session.session?.id,
         expiresAt: session.session?.expiresAt,
-        // @ts-ignore - Better-Auth types don't include activeOrganizationId but it may exist at runtime
         activeOrganizationId: session.activeOrganizationId || null,
         hasUser: true,
         hasSession: true,
@@ -81,9 +80,7 @@ export async function GET(req: NextRequest) {
 
     // Try to get multi-session info if available
     try {
-      // @ts-ignore - Better-Auth types are not up to date
       if (typeof auth.api.listSessions === 'function') {
-        // @ts-ignore - Better-Auth types are not up to date
         const sessions = await auth.api.listSessions({
           headers: req.headers,
         });

@@ -8,6 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { createOrgAdapter } from '@/lib/adapters/factory';
+import { getCacheSettings } from '@/lib/query/cache-config';
 import { queryKeys } from '@/lib/query/keys';
 import { orgWorkspaceSchema } from '@/lib/schemas/org-schemas';
 
@@ -38,6 +39,8 @@ export function useOrgWorkspaces(
       return orgWorkspaceSchema.array().parse(workspaces);
     },
     enabled: Boolean(orgId),
+    // Use the specific cache settings for organization workspaces
+    ...getCacheSettings('org', 'workspaces'),
   });
 }
 
@@ -59,5 +62,7 @@ export function useOrgWorkspace(workspaceId: string) {
       return orgWorkspaceSchema.parse(workspace);
     },
     enabled: Boolean(workspaceId),
+    // Use the specific cache settings for organization workspaces
+    ...getCacheSettings('org', 'workspaces'),
   });
 }

@@ -17,9 +17,14 @@
  */
 
 import { createAuthEndpoint } from 'better-auth/api';
+import { desc, eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
-import { createOrgAdapter } from '@/lib/adapters/factory';
+import { db } from '@/lib/db';
+import { orgActivity } from '@/lib/db/schema';
+
+// import { createOrgAdapter } from '@/lib/adapters/factory';
 
 import * as schemas from './schemas';
 
@@ -155,33 +160,31 @@ export const getOrgActivityEndpoint = createAuthEndpoint(
     const { limit = '10', offset = '0' } = ctx.query;
 
     try {
-      // Mock implementation for testing
-      // In a real implementation, this would fetch data from a database
-      const activities = [
-        {
-          id: `activity-1-${orgId}`,
-          orgId,
-          userId: 'user-1',
-          action: 'login',
-          resourceType: 'auth',
-          resourceId: 'session-1',
-          timestamp: new Date(Date.now() - 3600000),
-          metadata: { ip: '192.168.1.1' },
-        },
-        {
-          id: `activity-2-${orgId}`,
-          orgId,
-          userId: 'user-2',
-          action: 'create',
-          resourceType: 'workspace',
-          resourceId: 'workspace-1',
-          timestamp: new Date(),
-          metadata: { name: 'New Workspace' },
-        },
-      ];
+      // Convert string parameters to numbers
+      const limitNum = parseInt(limit, 10);
+      const offsetNum = parseInt(offset, 10);
+
+      // Query the database for activities
+      const activities = await db.query.orgActivity.findMany({
+        where: eq(orgActivity.orgId, orgId),
+        limit: limitNum,
+        offset: offsetNum,
+        orderBy: [desc(orgActivity.timestamp)],
+      });
+
+      // If no activities are found, return an empty array
+      if (!activities || activities.length === 0) {
+        return ctx.json([]);
+      }
+
+      // Process the activities to convert metadata from JSON string to object
+      const processedActivities = activities.map((activity) => ({
+        ...activity,
+        metadata: activity.metadata ? JSON.parse(activity.metadata) : null,
+      }));
 
       // Return the activities directly instead of wrapping in a data property
-      return ctx.json(activities);
+      return ctx.json(processedActivities);
     } catch (error) {
       console.error('Error fetching organization activity:', error);
       return ctx.json(
@@ -211,16 +214,44 @@ export const recordOrgActivityEndpoint = createAuthEndpoint(
     const activityData = ctx.body;
 
     try {
-      // Mock implementation for testing
-      // In a real implementation, this would record data in a database
-      const recordedActivity = {
-        id: `activity-${Math.random().toString(36).substring(2, 9)}`,
-        ...activityData,
-        timestamp: new Date(),
+      // Create a new activity record
+      const id = nanoid();
+      const timestamp = new Date();
+
+      // Insert the activity into the database
+      await db.insert(orgActivity).values({
+        id,
+        orgId: activityData.orgId,
+        userId: activityData.userId,
+        action: activityData.action,
+        resourceType: activityData.resourceType,
+        resourceId: activityData.resourceId,
+        timestamp,
+        metadata: activityData.metadata
+          ? JSON.stringify(activityData.metadata)
+          : null,
+      });
+
+      // Fetch the inserted record to return it
+      const [recordedActivity] = await db.query.orgActivity.findMany({
+        where: eq(orgActivity.id, id),
+        limit: 1,
+      });
+
+      if (!recordedActivity) {
+        throw new Error('Failed to retrieve recorded activity');
+      }
+
+      // Process the activity to convert metadata from JSON string to object
+      const processedActivity = {
+        ...recordedActivity,
+        metadata: recordedActivity.metadata
+          ? JSON.parse(recordedActivity.metadata)
+          : null,
       };
 
       // Return the activity directly instead of wrapping in a data property
-      return ctx.json(recordedActivity);
+      return ctx.json(processedActivity);
     } catch (error) {
       console.error('Error recording organization activity:', error);
       return ctx.json(

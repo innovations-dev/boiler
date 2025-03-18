@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger';
 
 interface EnhancedBetterAuthAPIError extends BetterAuthAPIError {
   code?: string;
-  statusCode?: number;
+  statusCode: number;
 }
 
 /**

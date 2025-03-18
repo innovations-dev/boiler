@@ -7,7 +7,6 @@ import { cookies, headers } from 'next/headers';
 import { NextRequest } from 'next/server';
 
 import { auth } from '@/lib/auth';
-import { authClient } from '@/lib/auth/client';
 import { logger } from '@/lib/logger';
 
 // Define a type for our custom session data
@@ -16,14 +15,17 @@ interface CustomSessionData {
     id: string;
     userId: string;
     expiresAt: Date;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
   };
   user: {
     id: string;
     email: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
   };
   activeOrganizationId?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -32,18 +34,19 @@ interface Cookie {
   name: string;
   value: string;
   expires?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
-interface DebugSessionInfo {
-  hasSession: boolean;
-  hasSessionCookie: boolean;
-  sessionId?: string;
-  userId?: string;
-  email?: string;
-  expiresAt?: string | Date;
-  error?: string;
-}
+// interface DebugSessionInfo {
+//   hasSession: boolean;
+//   hasSessionCookie: boolean;
+//   sessionId?: string;
+//   userId?: string;
+//   email?: string;
+//   expiresAt?: string | Date;
+//   error?: string;
+// }
 
 // Define an interface for the session with isActive property
 interface SessionWithActive {
@@ -63,6 +66,7 @@ interface SessionWithActive {
  * This function is meant to be used in server components
  */
 export async function debugSession() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Record<string, any> = {
     timestamp: new Date().toISOString(),
     cookies: {},
@@ -91,7 +95,6 @@ export async function debugSession() {
     }
 
     // Get session using Better-Auth's native method
-    // @ts-ignore - Better-Auth types are not up to date
     const session = await auth.api.getSession({
       headers: headersObj,
       query: {
@@ -105,7 +108,6 @@ export async function debugSession() {
         email: session.user.email,
         sessionId: session.session?.id,
         expiresAt: session.session?.expiresAt,
-        // @ts-ignore - Better-Auth types don't include activeOrganizationId but it may exist at runtime
         activeOrganizationId: session.activeOrganizationId || null,
         hasUser: true,
         hasSession: true,
@@ -132,9 +134,7 @@ export async function debugSession() {
 
     // Try to get multi-session info if available
     try {
-      // @ts-ignore - Better-Auth types are not up to date
       if (typeof auth.api.listSessions === 'function') {
-        // @ts-ignore - Better-Auth types are not up to date
         const sessions = await auth.api.listSessions({
           headers: headersObj,
         });
@@ -232,6 +232,7 @@ export async function getDebugCookieInfo() {
  * This is useful for server-side debugging
  */
 export function logSessionDebug(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   info: Record<string, any>,
   prefix = 'SESSION_DEBUG'
 ) {
@@ -246,8 +247,12 @@ export function logSessionDebug(
 export async function debugSessionState() {
   try {
     // Get the current session from the auth instance
-    // @ts-ignore - Better-Auth types are not up to date
-    const sessionData = (await auth.api.getSession()) as CustomSessionData;
+    const sessionData = (await auth.api.getSession({
+      headers: await headers(),
+      query: {
+        disableCookieCache: true,
+      },
+    })) as CustomSessionData;
 
     // Log session details
     logger.info('Session debug info', {
@@ -322,10 +327,12 @@ export async function debugRequestSession(req: NextRequest) {
     let validationError = null;
 
     try {
-      // @ts-ignore - Better-Auth types are not up to date
-      validSession = (await authClient.validateRequest(
-        req
-      )) as CustomSessionData;
+      validSession = (await auth.api.getSession({
+        headers: req.headers,
+        query: {
+          disableCookieCache: true,
+        },
+      })) as CustomSessionData;
     } catch (error) {
       validationError = error;
     }

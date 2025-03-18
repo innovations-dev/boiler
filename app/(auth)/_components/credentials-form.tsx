@@ -32,7 +32,7 @@ type CredentialsFormValues = z.infer<typeof credentialsSchema>;
 export function CredentialsForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
 
   const form = useForm<CredentialsFormValues>({
     resolver: zodResolver(credentialsSchema),
