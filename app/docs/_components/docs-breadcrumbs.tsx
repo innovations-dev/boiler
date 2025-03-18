@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import type { NavItem } from '../_types';
 
 // Generate breadcrumb items from current path
-function getBreadcrumbItems(pathname: string, nav: NavItem[]) {
+function getBreadcrumbItems(pathname: string | null, nav: NavItem[]) {
   if (!pathname) return [];
 
   const parts = pathname.split('/').filter(Boolean);

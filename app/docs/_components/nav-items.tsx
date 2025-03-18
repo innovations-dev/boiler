@@ -103,7 +103,7 @@ export function NavItem({
 }) {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(
-    pathname.startsWith(item.href || '') || level === 0
+    pathname?.startsWith(item.href || '') || level === 0
   );
 
   if (item.children?.length) {

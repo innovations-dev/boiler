@@ -26,11 +26,11 @@ interface ShellProps {
 export function Shell({ children }: ShellProps) {
   const pathname = usePathname();
   const isOrganizationPath =
-    pathname.includes('/organizations/') && !pathname.includes('/api/');
+    pathname?.includes('/organizations/') && !pathname?.includes('/api/');
 
   return (
     <div className="flex min-h-screen flex-col">
-      {isOrganizationPath && pathname.split('/').length > 2 && (
+      {isOrganizationPath && pathname && pathname.split('/').length > 2 && (
         <OrganizationNavWrapper />
       )}
       <main className="flex-1">{children}</main>

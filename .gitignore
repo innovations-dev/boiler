@@ -49,3 +49,7 @@ local.db-shm
 dev.db
 prod.db
 file.db
+
+# mcp
+mcp.json
+*.mdc

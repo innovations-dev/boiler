@@ -27,7 +27,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "vitest.config.ts.bak"
   ],
   "exclude": ["node_modules"]
 }

@@ -3,7 +3,6 @@
  * @module lib/email/services/email-service
  */
 
-import { createElement } from 'react';
 import { render } from '@react-email/render';
 
 import InvitationEmail from '@/emails/invitation';
@@ -30,27 +29,21 @@ type TemplateProps = {
     organizationName: string;
     invitedByUsername: string;
   };
-  RESET_PASSWORD: { url: string; expiryTime: string };
-  EMAIL_CHANGE: { url: string };
+  RESET_PASSWORD: {
+    url: string;
+    expiryTime: string;
+  };
 };
 
 /**
- * Map of email templates to their React components
+ * Email template components
  */
-const templateComponents = {
-  MAGIC_LINK: MagicLinkEmail as React.ComponentType<
-    TemplateProps['MAGIC_LINK']
-  >,
-  VERIFICATION: VerificationEmail as React.ComponentType<
-    TemplateProps['VERIFICATION']
-  >,
-  INVITATION: InvitationEmail as React.ComponentType<
-    TemplateProps['INVITATION']
-  >,
-  RESET_PASSWORD: ResetPasswordEmail as React.ComponentType<
-    TemplateProps['RESET_PASSWORD']
-  >,
-};
+// const templateComponents = {
+//   MAGIC_LINK: MagicLinkEmail,
+//   VERIFICATION: VerificationEmail,
+//   INVITATION: InvitationEmail,
+//   RESET_PASSWORD: ResetPasswordEmail,
+// };
 
 /**
  * Sends a templated email using Resend
@@ -98,36 +91,32 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     const templateConfig = emailConfig.templates[options.template];
     let html: string;
 
-    // Use the pre-rendering functions based on the template type
+    // Use the direct render approach based on the template type
     switch (options.template) {
-      case 'MAGIC_LINK':
-        const magicLinkElement = createElement(
-          templateComponents['MAGIC_LINK'],
-          options.data as TemplateProps['MAGIC_LINK']
-        );
-        html = await render(magicLinkElement);
+      case 'MAGIC_LINK': {
+        const props = options.data as TemplateProps['MAGIC_LINK'];
+        const magicLinkEmail = MagicLinkEmail(props);
+        html = await render(magicLinkEmail, { pretty: true });
         break;
-      case 'VERIFICATION':
-        const verificationElement = createElement(
-          templateComponents['VERIFICATION'],
-          options.data as TemplateProps['VERIFICATION']
-        );
-        html = await render(verificationElement);
+      }
+      case 'VERIFICATION': {
+        const props = options.data as TemplateProps['VERIFICATION'];
+        const verificationEmail = VerificationEmail(props);
+        html = await render(verificationEmail, { pretty: true });
         break;
-      case 'INVITATION':
-        const invitationElement = createElement(
-          templateComponents['INVITATION'],
-          options.data as TemplateProps['INVITATION']
-        );
-        html = await render(invitationElement);
+      }
+      case 'INVITATION': {
+        const props = options.data as TemplateProps['INVITATION'];
+        const invitationEmail = InvitationEmail(props);
+        html = await render(invitationEmail, { pretty: true });
         break;
-      case 'RESET_PASSWORD':
-        const resetPasswordElement = createElement(
-          templateComponents['RESET_PASSWORD'],
-          options.data as TemplateProps['RESET_PASSWORD']
-        );
-        html = await render(resetPasswordElement);
+      }
+      case 'RESET_PASSWORD': {
+        const props = options.data as TemplateProps['RESET_PASSWORD'];
+        const resetPasswordEmail = ResetPasswordEmail(props);
+        html = await render(resetPasswordEmail, { pretty: true });
         break;
+      }
       default:
         throw new EmailError(
           `Invalid email template: ${options.template}`,
